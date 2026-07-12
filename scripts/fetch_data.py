@@ -321,21 +321,23 @@ def update_series_history(name, var, fetch_fn, valid, keep=20, scan=40):
             hist = json.load(open(path, encoding="utf-8"))
         except Exception:  # noqa
             hist = {}
+    collected = 0
     for back in range(0, scan):
-        if len(hist) >= keep:
-            break
         dt = datetime.now(TPE) - timedelta(days=back)
         if dt.weekday() >= 5:  # 六日跳過
             continue
         d = dt.strftime("%Y%m%d")
         iso = f"{d[:4]}-{d[4:6]}-{d[6:]}"
         if iso in hist:
-            continue
+            break  # 由新到舊，遇到已存在的日期＝更舊的都已備齊，停止
         rec = fetch_fn(d, valid)
         if rec:
             hist[iso] = rec
+            collected += 1
             print(f"  {name} {iso}: {len(rec)} 檔")
         time.sleep(1.2)
+        if collected >= keep:  # 首次 backfill 補滿即停
+            break
     dates = sorted(hist.keys())[-keep:]
     hist = {d: hist[d] for d in dates}
     # 只輸出 .js（網站實際載入的格式），省下每日一份 .json 的重複 git 變動
