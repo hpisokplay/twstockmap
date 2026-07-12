@@ -451,6 +451,13 @@ footer.bigfoot .fdisc{font-size:11px;color:var(--dim);text-align:center;max-widt
 .prembar .pbtn:hover{filter:brightness(1.06)}
 .prembadge{font-size:10px;color:var(--gold);background:rgba(240,180,41,.14);border:1px solid rgba(240,180,41,.35);border-radius:8px;padding:1px 8px;font-weight:600}
 
+/* 手機：選股後只顯示個股頁（隱藏列表），像 aistockmap 全屏個股頁 */
+.mobonly{display:none}
+@media(max-width:820px){
+  .mobonly{display:inline-flex !important}
+  .dbwrap.has-stock .list{display:none}
+  .db-hide-mob{display:none}
+}
 /* 個股頁 tab */
 .stabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);margin-bottom:16px}
 .stabs::-webkit-scrollbar{display:none}
@@ -907,9 +914,9 @@ function vDB(){
       <span class="px ${fmt.cls(s.pct)}">${fmt.px(s.close)}　${fmt.pct(s.pct)}</span>
     </div>`).join('');
   return `
-  <h2 class="pagetitle">公司資料庫</h2>
-  <div class="pagesub">共 ${Object.keys(S.mkt.stocks).length} 檔，點選查看個股盤後資料</div>
-  <div class="dbwrap">
+  <h2 class="pagetitle${S.stock?' db-hide-mob':''}">公司資料庫</h2>
+  <div class="pagesub${S.stock?' db-hide-mob':''}">共 ${Object.keys(S.mkt.stocks).length} 檔，點選查看個股盤後資料</div>
+  <div class="dbwrap${S.stock?' has-stock':''}">
     <div class="list">
       <div class="lhd"><span class="t">個股列表</span><span class="c">${rows.length} 檔</span></div>
       <div class="sortbar">
@@ -974,6 +981,7 @@ function shareStock(code){
   prompt('複製連結：',url);
 }
 function setStockTab(t){ S.stockTab=t; render(); }
+function backToList(){ S.stock=null; render(); window.scrollTo({top:0}); }
 
 /* ---------- 個股頁：各分頁 ---------- */
 function stBasic(code,s,c){
@@ -1093,7 +1101,7 @@ function vStock(code){
   const content=(views[tab]||stBasic)(code,s,c,ts);
   return `<div class="stock">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <button class="back" style="margin:0" onclick="go('db')">‹ 返回</button>
+      <button class="back mobonly" style="margin:0" onclick="backToList()">‹ 返回列表</button>
       <div style="margin-left:auto;display:flex;gap:8px">
         <button class="favheart ${isFav(code)?'on':''}" data-fav="${code}" data-hearttext title="收藏" onclick="toggleFav('${code}',event)">${isFav(code)?'♥':'♡'}</button>
         <button class="favheart" title="分享" onclick="shareStock('${code}')">↗</button>
