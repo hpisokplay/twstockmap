@@ -900,6 +900,163 @@ function vDB(){
     <div>${S.stock?vStock(S.stock):'<div class="stock"><div class="empty">← 從左側選擇一檔股票查看盤後資料</div></div>'}</div>
   </div>`;
 }
+/* ---------- 個股頁：小工具 ---------- */
+// 極簡 SVG 折線圖：vals 為數值陣列（可含 null），labels 為對應標籤
+function svgLine(vals, labels, opt){
+  opt=opt||{};
+  const W=320,H=150,padL=40,padR=12,padT=12,padB=22;
+  const pts=vals.map((v,i)=>({v,i})).filter(p=>p.v!=null&&!isNaN(p.v));
+  if(pts.length<2) return `<div class="empty" style="padding:34px 0;font-size:12.5px">資料累積中，尚無足夠歷史繪製圖表。<br>部署後每交易日自動累積。</div>`;
+  const vs=pts.map(p=>p.v); let mn=Math.min(...vs),mx=Math.max(...vs);
+  if(mn===mx){mn-=1;mx+=1;}
+  const n=vals.length;
+  const X=i=>padL+(n<=1?0:(i/(n-1))*(W-padL-padR));
+  const Y=v=>padT+(1-(v-mn)/(mx-mn))*(H-padT-padB);
+  const color=opt.color||'#5aa2ff';
+  const d=pts.map((p,k)=>`${k?'L':'M'}${X(p.i).toFixed(1)},${Y(p.v).toFixed(1)}`).join('');
+  const yf=opt.yfmt||(v=>Math.round(v*100)/100);
+  const grid=[mx,(mx+mn)/2,mn].map(v=>{const yy=Y(v);return `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="#233250" stroke-dasharray="3 3"/><text x="${padL-6}" y="${(yy+3).toFixed(1)}" fill="#5c6f8f" font-size="9" text-anchor="end">${yf(v)}</text>`;}).join('');
+  const xl=labels?[0,Math.floor((n-1)/2),n-1].map(i=>`<text x="${X(i).toFixed(1)}" y="${H-6}" fill="#5c6f8f" font-size="9" text-anchor="middle">${labels[i]||''}</text>`).join(''):'';
+  const area=opt.area?`<path d="${d}L${X(pts[pts.length-1].i).toFixed(1)},${Y(mn).toFixed(1)}L${X(pts[0].i).toFixed(1)},${Y(mn).toFixed(1)}Z" fill="${color}" opacity="0.08"/>`:'';
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${grid}${area}<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${xl}</svg>`;
+}
+function tvSymbol(code){ const s=stk(code); return (s.market==='TPEx'?'TPEX:':'TWSE:')+code; }
+function priceHistorySeries(code){
+  const h=window.DATA_HISTORY; if(!h) return {vals:[],labels:[]};
+  const dates=Object.keys(h).sort();
+  const vals=dates.map(d=>h[d][code]==null?null:+h[d][code]);
+  const labels=dates.map(d=>d.slice(5).replace('-','/'));
+  return {vals,labels};
+}
+function tdccSeries(code){
+  const t=window.DATA_TDCC; if(!t) return {vals:[],labels:[]};
+  const dates=Object.keys(t).sort();
+  const vals=dates.map(d=>t[d][code]==null?null:+t[d][code]);
+  const labels=dates.map(d=>d.slice(5).replace('-','/'));
+  return {vals,labels};
+}
+function stockNews(code){
+  const N=window.DATA_NEWS; const s=stk(code); if(!N||!N.days||!s.name) return [];
+  const out=[]; const nm=s.name.replace(/-KY|\*/g,'');
+  for(const date of Object.keys(N.days).sort().reverse()){
+    for(const it of N.days[date]){
+      if(((it.title||'')+(it.summary||'')).includes(nm)) out.push({...it,date});
+    }
+  }
+  return out.slice(0,20);
+}
+function shareStock(code){
+  const s=stk(code); const url=location.origin+location.pathname+'?tab=db&c='+code;
+  if(navigator.share){ navigator.share({title:`${s.name} (${code})`,url}).catch(()=>{}); return; }
+  if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>alert('已複製連結')).catch(()=>{}); return; }
+  prompt('複製連結：',url);
+}
+function setStockTab(t){ S.stockTab=t; render(); }
+
+/* ---------- 個股頁：各分頁 ---------- */
+function stBasic(code,s,c){
+  const sc=scoreStock(code);
+  return `
+    ${sc?`<div class="infocard">
+      <div class="sechd"><span class="bar"></span><h4>綜合評分</h4><span class="sub">規則式計算，僅供研究參考</span></div>
+      <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+        <span style="font-size:36px;font-weight:800" class="${sc.total>=60?'up':(sc.total<=40?'dn':'')}">${sc.total}</span>
+        <div class="sbars" style="flex:1;min-width:240px">${sbarHtml('動能',sc.mom)}${sbarHtml('籌碼',sc.chips)}${sbarHtml('基本面',sc.fund)}${sbarHtml('題材',sc.theme)}</div>
+      </div></div>`:''}
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>今日行情</h4></div>
+      <div class="grid4">
+        <div class="kv"><span class="ico">🔔</span><div class="k">開盤</div><div class="v">${fmt.px(s.open)}</div></div>
+        <div class="kv"><span class="ico">🔺</span><div class="k">最高</div><div class="v up">${fmt.px(s.high)}</div></div>
+        <div class="kv"><span class="ico">🔻</span><div class="k">最低</div><div class="v dn">${fmt.px(s.low)}</div></div>
+        <div class="kv"><span class="ico">📦</span><div class="k">成交量</div><div class="v">${fmt.lot(s.volume)}</div></div>
+      </div></div>
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>估值與基本面</h4></div>
+      <div class="grid4">
+        <div class="kv"><span class="ico">💰</span><div class="k">市值（億）</div><div class="v">${fmt.num(c.mktcap_e)}</div></div>
+        <div class="kv"><span class="ico">📐</span><div class="k">本益比</div><div class="v">${fmt.num(s.pe)}</div></div>
+        <div class="kv"><span class="ico">📏</span><div class="k">股價淨值比</div><div class="v">${fmt.num(s.pb)}</div></div>
+        <div class="kv"><span class="ico">🎁</span><div class="k">殖利率</div><div class="v">${s.yield==null?'—':s.yield+'%'}</div></div>
+        <div class="kv"><span class="ico">🧾</span><div class="k">最新月營收</div><div class="v">${fmt.rev(c.rev)}</div>${revMonthLabel(c.rev_month)?`<div class="k" style="margin-top:3px">${revMonthLabel(c.rev_month)}</div>`:''}</div>
+        <div class="kv"><span class="ico">📈</span><div class="k">營收年增</div><div class="v ${fmt.cls(c.rev_yoy)}">${fmt.pct(c.rev_yoy)}</div></div>
+        <div class="kv"><span class="ico">📊</span><div class="k">累計營收年增</div><div class="v ${fmt.cls(c.rev_cum_yoy)}">${fmt.pct(c.rev_cum_yoy)}</div></div>
+      </div></div>
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>公司資料</h4></div>
+      <div class="grid4">
+        <div class="kv"><div class="k">董事長</div><div class="v small">${c.chairman||'—'}</div></div>
+        <div class="kv"><div class="k">成立日期</div><div class="v small">${fmt.date(c.founded)}</div></div>
+        <div class="kv"><div class="k">上市／上櫃日期</div><div class="v small">${fmt.date(c.listed)}</div></div>
+        <div class="kv"><div class="k">產業別代碼</div><div class="v small">${c.industry||'—'}</div></div>
+        <div class="kv" style="grid-column:span 2"><div class="k">公司地址</div><div class="v small">${c.address||'—'}</div></div>
+        <div class="kv" style="grid-column:span 2"><div class="k">官方網站</div><div class="v small">${c.website?`<a href="${c.website.startsWith('http')?'':'https://'}${c.website}" target="_blank" rel="noopener">${c.website}</a>`:'—'}</div></div>
+      </div></div>`;
+}
+function stIndustry(code,s,c,ts){
+  const badges=computeBadges(code);
+  return `
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>所屬產業題材</h4></div>
+      <div class="tags" style="margin-top:4px">${ts.map(t=>`<span class="themetag" onclick="go('map','${t.id}')">${t.icon} ${t.name}</span>`).join('')||'<span class="themetag">尚未歸類產業鏈</span>'}</div>
+    </div>
+    <div class="aisum">
+      <div class="aihd"><span class="sp">✦</span> 智能摘要</div>
+      <p>${s.name}（${code}）屬${c.industry?`「${c.industry}」`:''}類股${ts.length?`，涵蓋 ${ts.map(t=>t.name).join('、')} 等題材`:''}。目前股價 ${fmt.px(s.close)} 元（${fmt.pct(s.pct)}）${c.rev_yoy!=null?`，最新月營收年增 ${fmt.pct(c.rev_yoy)}`:''}${s.pe!=null?`，本益比 ${fmt.num(s.pe)} 倍`:''}${s.yield!=null?`，殖利率 ${s.yield}%`:''}。${badges.length?`籌碼與基本面訊號：${badges.join('、')}。`:''}</p>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px">＊ 本摘要由公開數據自動生成，非投資建議。</p>
+    </div>
+    ${badges.length?`<div class="infocard"><div class="sechd"><span class="bar"></span><h4>市場定位訊號</h4></div>
+      <div class="dbadges" style="margin-top:4px">${badges.map(b=>`<span class="dbadge">${b}</span>`).join('')}</div></div>`:''}
+    <div class="prembar"><span class="pico">👑</span><span class="ptxt"><b>Premium</b>：技術重心、主要產品與完整深度分析</span><button class="pbtn" onclick="premiumGo()">登入升級</button></div>`;
+}
+function stFinancial(code,s,c){
+  const ph=priceHistorySeries(code);
+  return `
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>股價走勢</h4><span class="sub">近 ${ph.vals.filter(v=>v!=null).length} 個交易日收盤</span></div>
+      ${svgLine(ph.vals,ph.labels,{color:'#5aa2ff',area:true})}</div>
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>營收與估值</h4></div>
+      <div class="grid4">
+        <div class="kv"><div class="k">最新月營收</div><div class="v">${fmt.rev(c.rev)}</div>${revMonthLabel(c.rev_month)?`<div class="k" style="margin-top:3px">${revMonthLabel(c.rev_month)}</div>`:''}</div>
+        <div class="kv"><div class="k">營收年增</div><div class="v ${fmt.cls(c.rev_yoy)}">${fmt.pct(c.rev_yoy)}</div></div>
+        <div class="kv"><div class="k">累計營收年增</div><div class="v ${fmt.cls(c.rev_cum_yoy)}">${fmt.pct(c.rev_cum_yoy)}</div></div>
+        <div class="kv"><div class="k">本益比</div><div class="v">${fmt.num(s.pe)}</div></div>
+        <div class="kv"><div class="k">股價淨值比</div><div class="v">${fmt.num(s.pb)}</div></div>
+        <div class="kv"><div class="k">殖利率</div><div class="v">${s.yield==null?'—':s.yield+'%'}</div></div>
+      </div></div>
+    <div class="prembar"><span class="pico">📊</span><span class="ptxt">損益表、ROE/ROA、財務健全度、現金流量等深度圖表為 <b>Premium</b> 內容</span><button class="pbtn" onclick="premiumGo()">登入升級</button></div>`;
+}
+function stChips(code,s){
+  const nets=[{k:'外資',v:s.foreign_net},{k:'投信',v:s.trust_net},{k:'三大法人合計',v:s.inst_net}];
+  const maxAbs=Math.max(1,...nets.map(n=>Math.abs(n.v||0)));
+  const netbarsHtml=nets.map(n=>{
+    const v=n.v; const ncls=fmt.cls(v); const color=ncls==='up'?'var(--up)':(ncls==='dn'?'var(--dn)':'var(--flat)');
+    const w=v==null?0:Math.abs(v)/maxAbs*50; const left=(v==null||v>=0)?'50%':(50-w)+'%';
+    return `<div class="nrow"><span class="k">${n.k}</span><span class="track"><span class="mid"></span><span class="fill" style="left:${left};width:${w}%;background:${color}"></span></span><span class="val ${ncls}">${fmt.lot(v)}</span></div>`;
+  }).join('');
+  const td=tdccSeries(code);
+  return `
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>法人籌碼（今日買賣超）</h4><span class="sub">單位：張</span></div>
+      <div class="netbars">${netbarsHtml}</div></div>
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>大戶持股比率趨勢</h4><span class="sub">集保 &gt;400 張持股占比（週資料）</span></div>
+      ${svgLine(td.vals,td.labels,{color:'#9d7bff',yfmt:v=>v.toFixed(1)+'%'})}</div>
+    <div class="prembar"><span class="pico">🧑‍🤝‍🧑</span><span class="ptxt">散戶／中實戶／大戶完整分布與融資融券趨勢為 <b>Premium</b> 內容</span><button class="pbtn" onclick="premiumGo()">登入升級</button></div>`;
+}
+function stTech(code){
+  const sym=tvSymbol(code);
+  const src=`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(sym)}&interval=D&theme=dark&style=1&locale=zh_TW&hide_side_toolbar=1&hideideas=1&withdateranges=1&studies=%5B%5D`;
+  return `
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>技術線圖（K 線）</h4><span class="sub">TradingView・${sym}</span></div>
+      <div class="tvwrap"><iframe src="${src}" title="TradingView ${sym}" loading="lazy" allowtransparency="true" scrolling="no"></iframe></div>
+      <div style="font-size:11px;color:var(--dim);margin-top:8px">圖表由 TradingView 提供，含 K 線、均線與技術指標，可切換週期與畫線。部分冷門股 TradingView 可能無資料。</div>
+    </div>`;
+}
+function stNews(code){
+  const list=stockNews(code);
+  return `
+    <div class="infocard"><div class="sechd"><span class="bar"></span><h4>相關新聞</h4><span class="sub">從產業焦點新聞比對個股名稱</span></div>
+      ${list.length?list.map(it=>`<a class="newsitem" ${it.url?`href="${it.url}" target="_blank" rel="noopener"`:''}>
+        <div class="nt">${it.title||''}</div>
+        <div class="nm">${it.source||''} · ${it.date}</div></a>`).join('')
+        :'<div class="empty" style="padding:34px 0">目前的產業新聞中沒有比對到這檔個股。</div>'}
+    </div>`;
+}
+
 function vStock(code){
   const s=stk(code); const c=(S.co&&S.co[code])||{};
   const ts=themesOf(code);
@@ -908,24 +1065,24 @@ function vStock(code){
   const chg=(s.change==null?'—':(s.change>0?'+':'')+(Math.round(s.change*100)/100));
   const lo=s.low, hi=s.high, cl=s.close;
   const rangePct = (lo!=null&&hi!=null&&cl!=null&&hi>lo) ? Math.max(0,Math.min(100,(cl-lo)/(hi-lo)*100)) : null;
-  const sc=scoreStock(code);
-  const nets=[{k:'外資',v:s.foreign_net},{k:'投信',v:s.trust_net},{k:'三大法人合計',v:s.inst_net}];
-  const maxAbs=Math.max(1,...nets.map(n=>Math.abs(n.v||0)));
-  const netbarsHtml=nets.map(n=>{
-    const v=n.v; const ncls=fmt.cls(v); const color=ncls==='up'?'var(--up)':(ncls==='dn'?'var(--dn)':'var(--flat)');
-    const w=v==null?0:Math.abs(v)/maxAbs*50;
-    const left=(v==null||v>=0)?'50%':(50-w)+'%';
-    return `<div class="nrow"><span class="k">${n.k}</span>
-      <span class="track"><span class="mid"></span><span class="fill" style="left:${left};width:${w}%;background:${color}"></span></span>
-      <span class="val ${ncls}">${fmt.lot(v)}</span></div>`;
-  }).join('');
+  const tab=S.stockTab||'basic';
+  const tabs=[['basic','基本資料'],['industry','產業分析'],['financial','財務分析'],['chips','籌碼分析'],['tech','技術分析'],['news','相關新聞']];
+  const views={basic:stBasic,industry:stIndustry,financial:stFinancial,chips:stChips,tech:stTech,news:stNews};
+  const content=(views[tab]||stBasic)(code,s,c,ts);
   return `<div class="stock">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <button class="back" style="margin:0" onclick="go('db')">‹ 返回</button>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="favheart ${isFav(code)?'on':''}" data-fav="${code}" data-hearttext title="收藏" onclick="toggleFav('${code}',event)">${isFav(code)?'♥':'♡'}</button>
+        <button class="favheart" title="分享" onclick="shareStock('${code}')">↗</button>
+      </div>
+    </div>
     <div class="sbanner">
       <div class="row1">
         <div class="avatar">${(s.name||code).charAt(0)}</div>
         <div class="nmwrap">
           <h3>${s.name}</h3><span class="cd">${code}</span><span class="mkt">${s.market==='TPEx'?'上櫃':'上市'}</span>
-          <div class="industry">${c.industry?`產業別代碼 ${c.industry}`:'—'}</div>
+          <div class="industry">${c.industry?`產業別：${c.industry}`:'—'}</div>
           <div class="tags">${ts.map(t=>`<span class="themetag" onclick="go('map','${t.id}')">${t.icon} ${t.name}</span>`).join('')||'<span class="themetag">尚未歸類產業鏈</span>'}</div>
         </div>
         <div class="pricewrap">
@@ -938,54 +1095,8 @@ function vStock(code){
         <div class="track"><span class="fill" style="width:100%"></span><span class="now" style="left:${rangePct}%"></span></div>
       </div>`:''}
     </div>
-
-    ${sc?`<div class="infocard">
-      <div class="sechd"><span class="bar"></span><h4>綜合評分</h4><span class="sub">規則式計算，僅供研究參考</span></div>
-      <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
-        <span style="font-size:36px;font-weight:800" class="${sc.total>=60?'up':(sc.total<=40?'dn':'')}">${sc.total}</span>
-        <div class="sbars" style="flex:1;min-width:240px">${sbarHtml('動能',sc.mom)}${sbarHtml('籌碼',sc.chips)}${sbarHtml('基本面',sc.fund)}${sbarHtml('題材',sc.theme)}</div>
-      </div>
-    </div>`:''}
-
-    <div class="infocard">
-      <div class="sechd"><span class="bar"></span><h4>今日行情</h4></div>
-      <div class="grid4">
-        <div class="kv"><span class="ico">🔔</span><div class="k">開盤</div><div class="v">${fmt.px(s.open)}</div></div>
-        <div class="kv"><span class="ico">🔺</span><div class="k">最高</div><div class="v up">${fmt.px(s.high)}</div></div>
-        <div class="kv"><span class="ico">🔻</span><div class="k">最低</div><div class="v dn">${fmt.px(s.low)}</div></div>
-        <div class="kv"><span class="ico">📦</span><div class="k">成交量</div><div class="v">${fmt.lot(s.volume)}</div></div>
-      </div>
-    </div>
-
-    <div class="infocard">
-      <div class="sechd"><span class="bar"></span><h4>估值與基本面</h4></div>
-      <div class="grid4">
-        <div class="kv"><span class="ico">💰</span><div class="k">市值（億）</div><div class="v">${fmt.num(c.mktcap_e)}</div></div>
-        <div class="kv"><span class="ico">📐</span><div class="k">本益比</div><div class="v">${fmt.num(s.pe)}</div></div>
-        <div class="kv"><span class="ico">📏</span><div class="k">股價淨值比</div><div class="v">${fmt.num(s.pb)}</div></div>
-        <div class="kv"><span class="ico">🎁</span><div class="k">殖利率</div><div class="v">${s.yield==null?'—':s.yield+'%'}</div></div>
-        <div class="kv"><span class="ico">🧾</span><div class="k">最新月營收</div><div class="v">${fmt.rev(c.rev)}</div>${revMonthLabel(c.rev_month)?`<div class="k" style="margin-top:3px">${revMonthLabel(c.rev_month)}</div>`:''}</div>
-        <div class="kv"><span class="ico">📈</span><div class="k">營收年增</div><div class="v ${fmt.cls(c.rev_yoy)}">${fmt.pct(c.rev_yoy)}</div></div>
-        <div class="kv"><span class="ico">📊</span><div class="k">累計營收年增</div><div class="v ${fmt.cls(c.rev_cum_yoy)}">${fmt.pct(c.rev_cum_yoy)}</div></div>
-      </div>
-    </div>
-
-    <div class="infocard">
-      <div class="sechd"><span class="bar"></span><h4>法人籌碼（買賣超）</h4><span class="sub">單位：股數換算張數</span></div>
-      <div class="netbars">${netbarsHtml}</div>
-    </div>
-
-    <div class="infocard">
-      <div class="sechd"><span class="bar"></span><h4>公司資料</h4></div>
-      <div class="grid4">
-        <div class="kv"><div class="k">董事長</div><div class="v small">${c.chairman||'—'}</div></div>
-        <div class="kv"><div class="k">成立日期</div><div class="v small">${fmt.date(c.founded)}</div></div>
-        <div class="kv"><div class="k">上市／上櫃日期</div><div class="v small">${fmt.date(c.listed)}</div></div>
-        <div class="kv"><div class="k">產業別代碼</div><div class="v small">${c.industry||'—'}</div></div>
-        <div class="kv" style="grid-column:span 2"><div class="k">公司地址</div><div class="v small">${c.address||'—'}</div></div>
-        <div class="kv" style="grid-column:span 2"><div class="k">官方網站</div><div class="v small">${c.website?`<a href="${c.website.startsWith('http')?'':'https://'}${c.website}" target="_blank" rel="noopener">${c.website}</a>`:'—'}</div></div>
-      </div>
-    </div>
+    <div class="stabs">${tabs.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="setStockTab('${k}')">${l}</button>`).join('')}</div>
+    ${content}
   </div>`;
 }
 
@@ -1463,7 +1574,7 @@ function render(){
 function go(tab,arg){
   S.tab=tab;
   if(tab==='map'&&arg)S.theme=arg;
-  if(tab==='db'&&arg)S.stock=arg;
+  if(tab==='db'&&arg){ if(arg!==S.stock) S.stockTab='basic'; S.stock=arg; }
   render(); window.scrollTo({top:0});
 }
 function headerSearch(v){ v=(v||'').trim(); if(!v) return; S.q=v; go('db'); const el=document.getElementById('hsearch'); if(el) el.value=''; }
