@@ -388,8 +388,9 @@ table.ov tr.body:hover{background:var(--card2);cursor:pointer}
 .tcard .icowrap.c2{background:linear-gradient(135deg,rgba(157,123,255,.30),rgba(157,123,255,.10))}
 .tcard .icowrap.c3{background:linear-gradient(135deg,rgba(46,204,143,.28),rgba(46,204,143,.10))}
 .tcard .icowrap.c4{background:linear-gradient(135deg,rgba(255,90,106,.26),rgba(255,90,106,.10))}
-.tcard .thead{display:flex;align-items:center;gap:8px}
-.tcard .cntpill{margin-left:auto;color:#fff;border-radius:20px;padding:3px 11px;font-size:10.5px;font-weight:700}
+.tcard .thead{display:flex;align-items:center;gap:8px;padding:14px 16px 0;background:none}
+.tcard .thead .rt{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tcard .cntpill{color:#fff;border-radius:20px;padding:3px 11px;font-size:10.5px;font-weight:700}
 .cntpill.p0{background:linear-gradient(135deg,#4a8fff,#5aa2ff)}
 .cntpill.p1{background:linear-gradient(135deg,#f0963c,#f0b429)}
 .cntpill.p2{background:linear-gradient(135deg,#9d7bff,#7c5bd6)}
@@ -661,25 +662,28 @@ function vTopics(){
     <div class="ft">🔥 今日題材平均漲幅焦點</div>
     <div class="fseg"><button class="${fmode==='up'?'on':''}" onclick="setFocusMode('up')">漲</button><button class="${fmode==='dn'?'on':''}" onclick="setFocusMode('dn')">跌</button></div>
   </div>
-  <div class="focus">${top3.map((x,i)=>`
-    <div class="fc" style="border-top-color:${x.avg>0?'var(--up)':'var(--dn)'}" onclick="go('map','${x.t.id}')">
+  ${(()=>{ const tc = fmode==='up' ? ['#ff5a6a','#f0963c','#f0b429'] : ['#2ecc8f','#37b88a','#4aa88a'];
+    return `<div class="focus">${top3.map((x,i)=>`
+    <div class="fc" style="border-top-color:${tc[i]}" onclick="go('map','${x.t.id}')">
       <div class="rank">#${i+1}　${x.count} 家</div>
       <div class="pct ${fmt.cls(x.avg)}">${fmt.pct(x.avg)}</div>
       <div class="nm">${x.t.name}</div>
     </div>`).join('')}
-  </div>
+  </div>`; })()}
   <div class="catbar">${cats.map(c=>`<button class="${c===S.cat?'on':''}" onclick="setCat('${c}')">${c}</button>`).join('')}</div>
   <div class="cards">${shown.map(t=>{
     const st=themeStats(t);
+    const ci=(S.ind.categories.indexOf(t.category)%5+5)%5;
     return `<div class="tcard" onclick="go('map','${t.id}')">
       <div class="thead">
-        <div class="top"><span class="icowrap">${t.icon}</span><span class="cnt">${st.count} 家公司</span></div>
+        <span class="icowrap c${ci}">${t.icon}</span>
+        <span class="rt">${heartBtn(t.id)}<span class="cntpill p${ci}">${st.count} 家公司</span></span>
       </div>
       <div class="body">
         <h3 style="margin-top:8px">${t.name}</h3><p>${t.desc}</p>
         <div class="updated">
           <span class="avg ${fmt.cls(st.avg)}">今日平均 ${fmt.pct(st.avg)}</span>
-          <span>探索產業地圖 →</span>
+          <span class="verify">資料 ${S.mkt.meta.trade_date} · 探索 →</span>
         </div>
       </div>
     </div>`;}).join('')}
@@ -1170,15 +1174,39 @@ function bigHolderPanel(){
 }
 
 /* --- 重大資訊觀測站 --- */
+// 依公告標題關鍵字簡易分類（無官方分類欄位時的近似）
+const MOPS_CATS=[
+  {key:'major', label:'重大事件', cls:'major', kw:['重大','取得','處分','認證','核准','獲准','合約','訂單','得標','投資','併購','收購','簽署','策略聯盟','擴產','動土','量產']},
+  {key:'gov',   label:'公司治理', cls:'gov',   kw:['股利','股東','董事','監察','減資','增資','庫藏股','董事會','私募','買回','選任','解任','背書保證','發放']},
+  {key:'fin',   label:'財務數據', cls:'fin',   kw:['營收','財報','財務','EPS','獲利','損益','合併','稅後','法說','營業額']},
+  {key:'self',  label:'自結',     cls:'self',  kw:['自結','自行結算']},
+  {key:'clar',  label:'澄清回應', cls:'clar',  kw:['澄清','回應','媒體','新聞報導','報載']},
+];
+function mopsCatOf(subject){
+  const s=String(subject||'');
+  for(const c of MOPS_CATS) if(c.kw.some(k=>s.includes(k))) return c;
+  return {key:'other',label:'其他',cls:'other'};
+}
+function setMopsCat(k){S.mopsCat=k;render();}
 function mopsPanel(){
   const list=S.mkt.mops||[]; if(!list.length)return '';
-  const shown=[...list].reverse().slice(0,S.mopsAll?60:8);
+  const tagged=[...list].reverse().map(m=>({...m,cat:mopsCatOf(m.subject)}));
+  const cur=S.mopsCat||'all';
+  const counts={all:tagged.length};
+  for(const m of tagged) counts[m.cat.key]=(counts[m.cat.key]||0)+1;
+  const cats=[{key:'all',label:'全部',cls:'other'},...MOPS_CATS,{key:'other',label:'其他',cls:'other'}].filter(c=>c.key==='all'||counts[c.key]);
+  const filtered=cur==='all'?tagged:tagged.filter(m=>m.cat.key===cur);
+  const shown=filtered.slice(0,S.mopsAll?80:8);
+  const chipCol={major:'#ff7a88',gov:'#b79dff',clar:'#7cb4ff',self:'#3ddc9c',fin:'#f0c65a',other:'var(--sub)'};
   return `<div class="panel" style="margin-top:14px"><h4>📋 重大資訊觀測站 <span style="font-size:11px;color:var(--dim)">證交所/櫃買公告</span></h4>
-  ${shown.map(m=>`<div class="rrow" onclick="go('db','${m.code}')" style="align-items:flex-start">
-    <span style="flex-shrink:0"><b>${m.name}</b> <span class="cd">${m.code}</span></span>
-    <span style="color:var(--sub);font-size:12.5px;flex:1">${m.subject}</span>
-    <span class="cd" style="flex-shrink:0">${m.date} ${String(m.time).slice(0,5)}</span></div>`).join('')}
-  ${list.length>8?`<div style="text-align:center;margin-top:8px"><button class="back" style="margin:0" onclick="S.mopsAll=!S.mopsAll;render()">${S.mopsAll?'收合':'展開全部 '+list.length+' 則'}</button></div>`:''}
+  <div class="mopscat">${cats.map(c=>`<button class="${cur===c.key?'on':''}" style="${cur===c.key?`background:${chipCol[c.key]||'var(--accent)'};border-color:transparent`:''}" onclick="setMopsCat('${c.key}')">${c.label} ${counts[c.key]||0}</button>`).join('')}</div>
+  ${shown.map(m=>`<div class="mopsrow" onclick="go('db','${m.code}')">
+    <span class="mtag ${m.cat.cls}">${m.cat.label}</span>
+    <span class="mbody"><span class="mtitle">${m.subject}</span>
+      <span class="mmeta"><b style="color:var(--sub)">${m.name}</b> ${m.code} · ${m.date} ${String(m.time).slice(0,5)}</span></span>
+    <span class="mchev">›</span></div>`).join('')||'<div class="empty" style="padding:24px 0">此分類暫無公告</div>'}
+  ${filtered.length>8?`<div style="text-align:center;margin-top:10px"><button class="back" style="margin:0" onclick="S.mopsAll=!S.mopsAll;render()">${S.mopsAll?'收合':'展開全部 '+filtered.length+' 則'}</button></div>`:''}
+  <div class="prembar" style="margin-top:14px"><span class="pico">☕</span><span class="ptxt"><b>${PREMIUM.coffee}</b>，解鎖完整 MOPS 重大公告</span><button class="pbtn" onclick="premiumGo()">立即升級</button></div>
   </div>`;
 }
 
@@ -1267,28 +1295,46 @@ function squarify(items,x,y,w,h,out){
   if(w<=h)squarify(rest,x,y+thick,w,h-thick,out);
   else squarify(rest,x+thick,y,w-thick,h,out);
 }
+function setHeatView(v){S.heatView=v;render();}
 function vHeat(){
-  const items=S.ind.themes.map(t=>{const st=themeStats(t);return {id:t.id,name:t.name,pct:st.avg,size:Math.max(Math.abs(st.avg??0),0.35)+0.15};})
-    .filter(x=>x.pct!=null).sort((a,b)=>b.size-a.size);
-  setTimeout(()=>{
-    const el=document.getElementById('tm'); if(!el)return;
-    const W=el.clientWidth,H=el.clientHeight,out=[];
-    squarify(items,0,0,W,H,out);
-    el.innerHTML=out.map(c=>{
-      const small=c.w<86||c.h<44;
-      return `<div class="tmc" style="left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px;background:${heatColor(c.pct)}"
-        onclick="go('map','${c.id}')" title="${c.name} ${fmt.pct(c.pct)}">
-        <div class="tn" style="${small?'font-size:10px':''}">${c.name}</div>
-        ${c.h>34?`<div class="tp">${fmt.pct(c.pct)}</div>`:''}</div>`;
-    }).join('');
-  },0);
+  const view=S.heatView||'grid';
+  const items=S.ind.themes.map(t=>{const st=themeStats(t);return {id:t.id,name:t.name,pct:st.avg,cnt:st.count,size:Math.max(Math.abs(st.avg??0),0.35)+0.15};})
+    .filter(x=>x.pct!=null).sort((a,b)=>b.pct-a.pct);
+  if(view==='grid'){
+    const sorted=[...items].sort((a,b)=>b.size-a.size);
+    setTimeout(()=>{
+      const el=document.getElementById('tm'); if(!el)return;
+      const W=el.clientWidth,H=el.clientHeight,out=[];
+      squarify(sorted,0,0,W,H,out);
+      el.innerHTML=out.map(c=>{
+        const small=c.w<86||c.h<44;
+        return `<div class="tmc" style="left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px;background:${heatColor(c.pct)}"
+          onclick="go('map','${c.id}')" title="${c.name} ${fmt.pct(c.pct)}">
+          <div class="tn" style="${small?'font-size:10px':''}">${c.name}</div>
+          ${c.h>34?`<div class="tp">${fmt.pct(c.pct)}</div>`:''}</div>`;
+      }).join('');
+    },0);
+  }
+  const toggle=`<div class="viewtoggle">
+    <button class="${view==='grid'?'on':''}" onclick="setHeatView('grid')">▦ 方塊</button>
+    <button class="${view==='list'?'on':''}" onclick="setHeatView('list')">☰ 清單</button></div>`;
+  const body = view==='grid'
+    ? `<div class="panel"><div id="tm"></div>
+        <div class="legend">跌超5% <i style="background:${HEAT_DN[3]}"></i><i style="background:${HEAT_DN[2]}"></i><i style="background:${HEAT_DN[1]}"></i><i style="background:${HEAT_DN[0]}"></i><i style="background:${HEAT_FLAT}"></i><i style="background:${HEAT_UP[0]}"></i><i style="background:${HEAT_UP[1]}"></i><i style="background:${HEAT_UP[2]}"></i><i style="background:${HEAT_UP[3]}"></i> 漲超5%</div>
+      </div>`
+    : `<div class="panel" style="overflow-x:auto"><table class="tmlist">
+        <tr><th>產業題材</th><th>家數</th><th>平均漲跌 ↓</th></tr>
+        ${items.map(x=>`<tr onclick="go('map','${x.id}')">
+          <td><span class="bar" style="background:${heatColor(x.pct)}"></span>${x.name}</td>
+          <td style="color:var(--dim)">${x.cnt}</td>
+          <td class="${fmt.cls(x.pct)}" style="font-weight:600">${fmt.pct(x.pct)}</td></tr>`).join('')}
+      </table></div>`;
   return `
   <h2 class="pagetitle">市場熱力圖</h2>
-  <div class="pagesub">區塊大小＝產業平均漲跌幅度（絕對值），顏色＝漲跌方向與強度。點擊區塊進入該產業地圖。</div>
-  <div class="panel"><div id="tm"></div>
-  <div class="legend">跌超5% <i style="background:${HEAT_DN[3]}"></i><i style="background:${HEAT_DN[2]}"></i><i style="background:${HEAT_DN[1]}"></i><i style="background:${HEAT_DN[0]}"></i><i style="background:${HEAT_FLAT}"></i><i style="background:${HEAT_UP[0]}"></i><i style="background:${HEAT_UP[1]}"></i><i style="background:${HEAT_UP[2]}"></i><i style="background:${HEAT_UP[3]}"></i> 漲超5%</div>
-  </div>
-  <div class="pagesub" style="margin-top:8px">另有表格版：<a href="javascript:void(0)" onclick="go('overview')">產業總覽</a>（相同數據、可排序）。</div>`;
+  <div class="pagesub">區塊大小＝產業平均漲跌幅度（絕對值），顏色＝漲跌方向與強度。點擊進入該產業地圖。</div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px">${toggle}</div>
+  ${body}
+  <div class="pagesub" style="margin-top:8px">另有可排序表格：<a href="javascript:void(0)" onclick="go('overview')">產業總覽</a>。</div>`;
 }
 
 /* ---------- 綜合評分 ---------- */
