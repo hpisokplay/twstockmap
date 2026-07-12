@@ -341,7 +341,7 @@ def main():
             companies[code] = {
                 "industry": (r.get("產業別") or r.get("SecuritiesIndustryCode") or "").strip(),
                 "chairman": (r.get("董事長") or r.get("Chairman") or "").strip(),
-                "founded": (r.get("成立日期") or r.get("DateOfIncorporation") or "").strip()[:7],
+                "founded": (r.get("成立日期") or r.get("DateOfIncorporation") or "").strip(),
                 "listed": (r.get("上市日期") or r.get("DateOfListing") or "").strip(),
                 "website": (r.get("網址") or r.get("WebAddress") or "").strip(),
                 "address": (r.get("住址") or r.get("Address") or "").strip(),
