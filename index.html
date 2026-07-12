@@ -351,6 +351,134 @@ table.ov tr.body:hover{background:var(--card2);cursor:pointer}
 .crcard .avatar{background:linear-gradient(135deg,var(--accent2),var(--accent))}
 .crcard .plat{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--sub);background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:3px 9px;margin-right:6px}
 .crcard .nm-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ============ aistockmap 復刻：P1 視覺與結構 ============ */
+/* 顏色補充：紫色系 accent、金色 premium、彩色 icon 底 */
+:root{--gold:#f0b429;--prem:#f0b429;--tag-a:#5aa2ff;--tag-b:#9d7bff;}
+
+/* header 圖標列 */
+.brand .hicons{display:flex;align-items:center;gap:4px;margin-left:6px}
+.brand .hicons button{width:34px;height:34px;border-radius:50%;background:none;border:1px solid var(--line);color:var(--sub);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .12s,color .12s}
+.brand .hicons button:hover{border-color:var(--accent);color:var(--accent)}
+.brand .hicons button.prem{color:var(--gold);border-color:rgba(240,180,41,.4)}
+.brand .hicons button.prem:hover{background:rgba(240,180,41,.12)}
+@media(max-width:520px){.brand .hicons .opt{display:none}}
+
+/* 浮動圓形按鈕 + 選單 */
+.fab{position:fixed;right:18px;bottom:20px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#4a8fff,#5aa2ff);border:none;color:#fff;font-size:22px;cursor:pointer;box-shadow:0 6px 20px rgba(74,143,255,.45);z-index:60;display:flex;align-items:center;justify-content:center}
+.fab:hover{filter:brightness(1.08)}
+.fabmenu{position:fixed;right:18px;bottom:86px;z-index:60;display:none;flex-direction:column;gap:8px}
+.fabmenu.open{display:flex}
+.fabmenu a{background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:10px 16px;font-size:13.5px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;white-space:nowrap;min-width:150px}
+.fabmenu a:hover{border-color:var(--accent);color:var(--accent)}
+.fabback{position:fixed;inset:0;z-index:55;display:none}
+.fabback.open{display:block}
+
+/* 收藏 ♥ 按鈕 */
+.favbtn{background:none;border:1px solid var(--line);color:var(--sub);border-radius:9px;padding:4px 10px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.favbtn:hover{border-color:var(--up)}
+.favbtn.on{color:var(--up);border-color:rgba(255,90,106,.5);background:rgba(255,90,106,.08)}
+.favheart{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--bg2);color:var(--sub);font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.favheart:hover{border-color:var(--up);color:var(--up)}
+.favheart.on{color:var(--up);border-color:rgba(255,90,106,.5);background:rgba(255,90,106,.12)}
+
+/* 題材卡：彩色 icon 底 + 家數 pill + 核實日期 */
+.tcard .icowrap.c0{background:linear-gradient(135deg,rgba(90,162,255,.28),rgba(90,162,255,.10))}
+.tcard .icowrap.c1{background:linear-gradient(135deg,rgba(240,150,60,.30),rgba(240,150,60,.10))}
+.tcard .icowrap.c2{background:linear-gradient(135deg,rgba(157,123,255,.30),rgba(157,123,255,.10))}
+.tcard .icowrap.c3{background:linear-gradient(135deg,rgba(46,204,143,.28),rgba(46,204,143,.10))}
+.tcard .icowrap.c4{background:linear-gradient(135deg,rgba(255,90,106,.26),rgba(255,90,106,.10))}
+.tcard .thead{display:flex;align-items:center;gap:8px}
+.tcard .cntpill{margin-left:auto;color:#fff;border-radius:20px;padding:3px 11px;font-size:10.5px;font-weight:700}
+.cntpill.p0{background:linear-gradient(135deg,#4a8fff,#5aa2ff)}
+.cntpill.p1{background:linear-gradient(135deg,#f0963c,#f0b429)}
+.cntpill.p2{background:linear-gradient(135deg,#9d7bff,#7c5bd6)}
+.cntpill.p3{background:linear-gradient(135deg,#2ecc8f,#26a875)}
+.cntpill.p4{background:linear-gradient(135deg,#ff5a6a,#e0455a)}
+.tcard .thead .fav{margin-left:6px}
+.tcard .verify{font-size:10.5px;color:var(--dim)}
+.tcard.updated-glow{border-color:rgba(240,180,41,.55);box-shadow:0 0 0 1px rgba(240,180,41,.25),0 0 18px rgba(240,180,41,.12)}
+.tcard .updbadge{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--gold);background:rgba(240,180,41,.12);border:1px solid rgba(240,180,41,.35);border-radius:8px;padding:1px 7px}
+
+/* 熱力圖：視圖切換 + 清單表格 */
+.viewtoggle{display:inline-flex;gap:2px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:3px}
+.viewtoggle button{background:none;border:none;color:var(--sub);font-size:13px;padding:5px 12px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.viewtoggle button.on{background:var(--accent);color:#fff}
+table.tmlist{width:100%;border-collapse:collapse;font-size:13.5px}
+table.tmlist th{font-size:11.5px;color:var(--dim);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+table.tmlist th:first-child{text-align:left}
+table.tmlist td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right}
+table.tmlist td:first-child{text-align:left}
+table.tmlist tr:hover{background:var(--card2);cursor:pointer}
+.tmlist .bar{display:inline-block;width:4px;height:15px;border-radius:2px;vertical-align:middle;margin-right:8px}
+
+/* MOPS 分類彩標 + 展開 */
+.mopscat{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.mopscat button{background:var(--bg2);border:1px solid var(--line);color:var(--sub);border-radius:9px;padding:3px 11px;font-size:11.5px;cursor:pointer}
+.mopscat button.on{color:#fff}
+.mtag{font-size:10px;border-radius:7px;padding:2px 8px;font-weight:600;flex-shrink:0}
+.mtag.major{background:rgba(255,90,106,.16);color:#ff7a88}
+.mtag.gov{background:rgba(157,123,255,.18);color:#b79dff}
+.mtag.clar{background:rgba(90,162,255,.16);color:#7cb4ff}
+.mtag.self{background:rgba(46,204,143,.16);color:#3ddc9c}
+.mtag.fin{background:rgba(240,180,41,.16);color:#f0c65a}
+.mtag.other{background:rgba(143,163,192,.14);color:var(--sub)}
+.mopsrow{display:flex;gap:10px;align-items:flex-start;padding:11px 4px;border-top:1px solid var(--line);cursor:pointer}
+.mopsrow:hover{background:var(--card2)}
+.mopsrow .mbody{flex:1;min-width:0}
+.mopsrow .mtitle{font-size:13.5px;line-height:1.45}
+.mopsrow .mmeta{font-size:11px;color:var(--dim);margin-top:3px}
+.mopsrow .mchev{color:var(--dim);font-size:12px;flex-shrink:0}
+
+/* 大型 footer */
+footer.bigfoot{border-top:1px solid var(--line);margin-top:30px;padding:26px 16px 40px}
+footer.bigfoot .fslogan{color:var(--sub);font-size:13px;text-align:center;max-width:560px;margin:0 auto 14px;line-height:1.7}
+footer.bigfoot .fsoc{display:flex;gap:16px;justify-content:center;margin-bottom:14px}
+footer.bigfoot .fsoc a{font-size:13px;color:var(--accent);display:inline-flex;align-items:center;gap:5px}
+footer.bigfoot .flinks{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+footer.bigfoot .flinks a{font-size:11.5px;color:var(--dim)}
+footer.bigfoot .flinks a:hover{color:var(--sub)}
+footer.bigfoot .fcopy{font-size:11px;color:var(--dim);text-align:center}
+footer.bigfoot .fdisc{font-size:11px;color:var(--dim);text-align:center;max-width:640px;margin:10px auto 0;line-height:1.6}
+
+/* Premium 鎖橫幅（外觀，連到贊助頁） */
+.prembar{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(240,180,41,.08),rgba(240,180,41,.03));border:1px solid rgba(240,180,41,.3);border-radius:var(--radius);padding:12px 16px;margin:14px 0}
+.prembar .pico{font-size:18px}
+.prembar .ptxt{flex:1;font-size:12.5px;color:var(--sub)}
+.prembar .ptxt b{color:var(--gold)}
+.prembar .pbtn{background:linear-gradient(135deg,#f0b429,#f0963c);border:none;color:#3a2a00;font-weight:700;font-size:12.5px;border-radius:9px;padding:8px 18px;cursor:pointer;white-space:nowrap}
+.prembar .pbtn:hover{filter:brightness(1.06)}
+.prembadge{font-size:10px;color:var(--gold);background:rgba(240,180,41,.14);border:1px solid rgba(240,180,41,.35);border-radius:8px;padding:1px 8px;font-weight:600}
+
+/* 個股頁 tab */
+.stabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);margin-bottom:16px}
+.stabs::-webkit-scrollbar{display:none}
+.stabs button{background:none;border:none;color:var(--sub);font-size:14px;padding:10px 15px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent}
+.stabs button.on{color:var(--txt);border-bottom-color:var(--accent);font-weight:600}
+.ssub{display:inline-flex;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:14px;flex-wrap:wrap}
+.ssub button{background:none;border:none;color:var(--sub);font-size:13px;padding:6px 14px;border-radius:7px;cursor:pointer}
+.ssub button.on{background:var(--accent);color:#fff;font-weight:600}
+.aisum{background:linear-gradient(135deg,rgba(157,123,255,.10),rgba(90,162,255,.06));border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.aisum .aihd{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;margin-bottom:8px}
+.aisum .aihd .sp{color:var(--accent2)}
+.aisum p{font-size:13px;color:var(--sub);line-height:1.75}
+.tvwrap{position:relative;width:100%;height:460px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line)}
+.tvwrap iframe{width:100%;height:100%;border:0}
+.newsitem{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px}
+.newsitem:hover{border-color:var(--accent)}
+.newsitem .nt{font-size:14.5px;font-weight:600;color:var(--txt);line-height:1.5}
+.newsitem .nm{font-size:11.5px;color:var(--dim);margin-top:6px}
+
+/* 產業鏈：差異比較矩陣 */
+table.matrix{width:100%;border-collapse:collapse;font-size:13.5px}
+table.matrix th{font-size:12px;color:var(--dim);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+table.matrix td{padding:11px 12px;border-bottom:1px solid var(--line)}
+table.matrix tr:hover{background:var(--card2);cursor:pointer}
+table.matrix .mcode{font-size:11px;color:var(--dim)}
+.chaintoggle{display:inline-flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px;margin-bottom:16px}
+.chaintoggle button{background:none;border:none;color:var(--sub);font-size:13.5px;padding:7px 16px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chaintoggle button.on{background:var(--accent);color:#fff;font-weight:600}
+.rolecard .gdesc2{font-size:11.5px;color:var(--dim);margin:2px 0 10px}
 </style>
 </head>
 <body>
@@ -359,6 +487,13 @@ table.ov tr.body:hover{background:var(--card2);cursor:pointer}
     <div class="brand">
       <div class="logo">📈</div><h1>台股產業地圖</h1>
       <div class="hsearch"><input id="hsearch" placeholder="🔍 搜尋個股名稱或代碼…" onkeydown="if(event.key==='Enter')headerSearch(this.value)"></div>
+      <div class="hicons">
+        <button class="opt" title="搜尋" onclick="headerSearchPrompt()">🔍</button>
+        <button title="我的收藏" onclick="go('fav')">♡</button>
+        <button class="prem" title="Premium" onclick="premiumModal()">👑</button>
+        <button class="opt" title="說明" onclick="helpModal()">﹖</button>
+        <button class="opt" title="帳戶" onclick="premiumModal()">👤</button>
+      </div>
       <span class="upd" id="upd"></span>
     </div>
     <nav id="nav">
@@ -381,12 +516,97 @@ table.ov tr.body:hover{background:var(--card2);cursor:pointer}
 <script src="data/news.js"></script>
 <script src="data/history.js"></script>
 <script src="data/tdcc.js"></script>
-<footer>
-  資料來源：臺灣證券交易所、證券櫃檯買賣中心公開資訊，每個交易日盤後自動更新。<br>
-  產業鏈分類由 AI 依公開資訊整理，僅供研究參考，內容可能有誤，不構成任何投資建議。
+<footer class="bigfoot">
+  <div class="fslogan">運用 AI 將複雜產業轉化為易懂的產業地圖。歡迎追蹤，一同探索產業奧秘！</div>
+  <div class="fsoc">
+    <a href="#" onclick="return false">📘 Facebook 粉專</a>
+    <a href="#" onclick="return false">🧵 Threads</a>
+  </div>
+  <div class="flinks">
+    <a href="#" onclick="return false">服務條款</a>
+    <a href="#" onclick="return false">隱私權政策</a>
+    <a href="#" onclick="return false">退換貨政策</a>
+    <a href="#" onclick="return false">消費者權益</a>
+  </div>
+  <div class="fdisc">資料來源：臺灣證券交易所、證券櫃檯買賣中心公開資訊，每個交易日盤後自動更新。產業鏈分類由 AI 依公開資訊整理，僅供研究參考，內容可能有誤，不構成任何投資建議。</div>
+  <div class="fcopy">© 2026 台股產業地圖. All rights reserved.</div>
 </footer>
+<!-- 浮動圓形按鈕 + 選單 -->
+<div class="fabback" id="fabback" onclick="toggleFab(false)"></div>
+<div class="fabmenu" id="fabmenu">
+  <a onclick="go('daily');toggleFab(false)">📊 每日焦點</a>
+  <a onclick="go('topics');toggleFab(false)">🗂️ 題材總覽</a>
+  <a onclick="go('heat');toggleFab(false)">🔥 市場熱力圖</a>
+  <a onclick="go('fav');toggleFab(false)">♥ 我的收藏</a>
+  <a onclick="headerSearchPrompt();toggleFab(false)">🔍 搜尋個股</a>
+  <a onclick="scrollTo({top:0,behavior:'smooth'});toggleFab(false)">⬆️ 回到頂端</a>
+</div>
+<button class="fab" id="fab" onclick="toggleFab()">☰</button>
 <script>
 const S = { ind:null, mkt:null, co:null, tab:'topics', cat:'全部', theme:null, stock:null, q:'', newsDate:null };
+
+/* ---------- Premium 設定（純外觀；把 url 換成你的贊助/訂閱頁即可）---------- */
+const PREMIUM = {
+  url: '',  // 例如 'https://p.ecpay.com.tw/你的頁面' 或 'https://buymeacoffee.com/你的帳號'
+  coffee: '一個月一杯咖啡支持作者',
+};
+function premiumGo(){ if(PREMIUM.url){ window.open(PREMIUM.url,'_blank','noopener'); } else { premiumModal(); } }
+
+/* ---------- 收藏（localStorage）---------- */
+const FAV_KEY = 'twmap_favs';
+function favs(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY)||'[]'); }catch(e){ return []; } }
+function isFav(code){ return favs().indexOf(code)>=0; }
+function toggleFav(code, ev){
+  if(ev){ ev.stopPropagation(); }
+  const f=favs(); const i=f.indexOf(code);
+  if(i>=0) f.splice(i,1); else f.push(code);
+  try{ localStorage.setItem(FAV_KEY, JSON.stringify(f)); }catch(e){}
+  // 就地更新所有相同 code 的愛心，避免整頁重繪
+  document.querySelectorAll('[data-fav="'+code+'"]').forEach(el=>{
+    const on=isFav(code); el.classList.toggle('on',on);
+    if(el.dataset.hearttext!==undefined) el.textContent=on?'♥':'♡';
+  });
+  if(S.tab==='fav') render();
+}
+function heartBtn(code, cls){
+  const on=isFav(code);
+  return `<button class="favheart ${on?'on':''}" data-fav="${code}" data-hearttext title="收藏" onclick="toggleFav('${code}',event)">${on?'♥':'♡'}</button>`;
+}
+
+/* ---------- 浮動按鈕 / 彈窗 ---------- */
+function toggleFab(force){
+  const open = force===undefined ? !document.getElementById('fabmenu').classList.contains('open') : force;
+  document.getElementById('fabmenu').classList.toggle('open',open);
+  document.getElementById('fabback').classList.toggle('open',open);
+  document.getElementById('fab').textContent = open?'✕':'☰';
+}
+function modal(html){
+  let m=document.getElementById('appmodal');
+  if(!m){ m=document.createElement('div'); m.id='appmodal';
+    m.style.cssText='position:fixed;inset:0;z-index:100;background:rgba(3,7,15,.72);display:flex;align-items:center;justify-content:center;padding:20px';
+    m.onclick=e=>{ if(e.target===m) m.remove(); };
+    document.body.appendChild(m);
+  }
+  m.innerHTML=`<div style="background:var(--card);border:1px solid var(--line);border-radius:16px;max-width:400px;width:100%;padding:22px;position:relative">
+    <button onclick="document.getElementById('appmodal').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer">✕</button>
+    ${html}</div>`;
+}
+function premiumModal(){
+  modal(`<div style="text-align:center">
+    <div style="font-size:34px">👑</div>
+    <h3 style="font-size:18px;margin:8px 0 6px">Premium 會員</h3>
+    <p style="font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:16px">${PREMIUM.coffee}，解鎖盤中即時數據、完整 MOPS 公告與個股深度分析。</p>
+    <button class="pbtn" style="background:linear-gradient(135deg,#f0b429,#f0963c);border:none;color:#3a2a00;font-weight:700;font-size:14px;border-radius:10px;padding:10px 28px;cursor:pointer" onclick="premiumGo()">立即升級</button>
+    <p style="font-size:11px;color:var(--dim);margin-top:14px">${PREMIUM.url?'':'（尚未設定升級連結：在 index.html 的 PREMIUM.url 填入你的贊助/訂閱網址即可啟用）'}</p>
+  </div>`);
+}
+function helpModal(){
+  modal(`<h3 style="font-size:17px;margin-bottom:10px">關於本站 ﹖</h3>
+    <p style="font-size:13px;color:var(--sub);line-height:1.8">台股產業鏈地圖：題材總覽、上中下游供應鏈、個股盤後資料（行情／估值／法人／月營收／技術線圖），每個交易日盤後自動更新。<br><br>資料來自臺灣證券交易所與櫃買中心公開資訊，產業鏈分類由 AI 整理，僅供研究參考，不構成投資建議。</p>`);
+}
+function headerSearchPrompt(){
+  const v=prompt('搜尋個股名稱或代碼：'); if(v&&v.trim()) headerSearch(v.trim());
+}
 
 const fmt = {
   px: v => v==null?'—':(v>=100?v.toFixed(1):v.toFixed(2)),
@@ -1151,11 +1371,40 @@ function vCreators(){
   <div class="pagesub" style="margin-top:12px;text-align:center">所有內容僅整理創作者公開發布之觀點，不構成投資建議。</div>`;
 }
 
+/* ---------- 我的收藏 ---------- */
+function vFav(){
+  const all=favs();
+  const themeIds=new Set(S.ind.themes.map(t=>t.id));
+  const favThemes=S.ind.themes.filter(t=>all.includes(t.id));
+  const favStocks=all.filter(c=>!themeIds.has(c)&&S.mkt.stocks[c]);
+  const themeCards=favThemes.map(t=>{
+    const st=themeStats(t);
+    return `<div class="tcard" onclick="go('map','${t.id}')">
+      <div class="thead"><span class="icowrap c0">${t.icon}</span><span class="cntpill p0">${st.count} 家</span>
+        <span class="fav">${heartBtn(t.id)}</span></div>
+      <div class="body"><h3 style="margin-top:8px">${t.name}</h3><p>${t.desc}</p>
+        <div class="updated"><span class="avg ${fmt.cls(st.avg)}">今日平均 ${fmt.pct(st.avg)}</span><span>探索 →</span></div></div>
+    </div>`;}).join('');
+  const stockRows=favStocks.map(cd=>{const s=stk(cd);
+    return `<div class="lrow" onclick="go('db','${cd}')">
+      <span class="nm" title="${s.name}">${s.name}</span><span class="cd">${cd}</span>
+      <span class="px ${fmt.cls(s.pct)}">${fmt.px(s.close)}　${fmt.pct(s.pct)}</span></div>`;}).join('');
+  return `
+  <div class="hero" style="padding:14px 10px 20px">
+    <h1 class="htitle" style="font-size:24px">♥ 我的收藏</h1>
+    <div class="htag">你收藏的題材與個股（儲存在此瀏覽器）</div>
+  </div>
+  ${favThemes.length?`<div class="sec">🗂️ 收藏題材（${favThemes.length}）</div><div class="cards">${themeCards}</div>`:''}
+  ${favStocks.length?`<div class="sec" style="margin-top:18px">📈 收藏個股（${favStocks.length}）</div>
+    <div class="list" style="position:static;max-width:420px"><div class="rows" style="max-height:none">${stockRows}</div></div>`:''}
+  ${!all.length?`<div class="empty">尚未收藏任何項目。<br>在題材卡、個股頁點 ♡ 即可加入收藏。</div>`:''}`;
+}
+
 /* ---------- 路由 ---------- */
 function render(){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
   const m=document.getElementById('main');
-  const views={daily:vDaily,topics:vTopics,overview:vOverview,map:vMap,db:vDB,heat:vHeat,rank:vRank,creators:vCreators};
+  const views={daily:vDaily,topics:vTopics,overview:vOverview,map:vMap,db:vDB,heat:vHeat,rank:vRank,creators:vCreators,fav:vFav};
   m.innerHTML = (views[S.tab]||vTopics)();
   const meta=S.mkt.meta;
   document.getElementById('upd').textContent = meta.demo?'示範資料':`資料日期 ${meta.trade_date}`;
