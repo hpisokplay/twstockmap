@@ -227,7 +227,8 @@ table.ov tr.body:hover{background:var(--card2);cursor:pointer}
 .newsrow::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
 .ncard{position:relative;flex:0 0 300px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:8px;min-height:214px}
 .ncard .nc1{display:flex;align-items:center;gap:8px}
-.ncard .src{font-size:11px;color:var(--accent);background:rgba(90,162,255,.12);border-radius:7px;padding:2px 8px}
+.ncard .src{font-size:11px;color:var(--accent);background:rgba(90,162,255,.12);border-radius:7px;padding:2px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:3px}
+.ncard a.src:hover{background:rgba(90,162,255,.22)}
 .ncard .nd{margin-left:auto;font-size:11px;color:var(--dim)}
 .ncard h4{font-size:15px;font-weight:700;line-height:1.4}
 .ncard p{font-size:12.5px;color:var(--sub);flex:1;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
@@ -776,7 +777,10 @@ function newsSection(){
     const tags=(it.topics||[]).map(t=>t.id
       ?`<span class="ntag" onclick="event.stopPropagation();go('map','${t.id}')">${t.name}</span>`
       :`<span class="ntag">${t.name}</span>`).join('');
-    const inner=`<div class="nc1"><span class="src">${it.source||''}</span><span class="nd">${mdd(cur)}</span></div>
+    const srcTag = it.url
+      ? `<a class="src" href="${it.url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${it.source||''} ↗</a>`
+      : `<span class="src">${it.source||''}</span>`;
+    const inner=`<div class="nc1">${srcTag}<span class="nd">${mdd(cur)}</span></div>
       <h4>${it.title||''}</h4><p>${it.summary||''}</p>
       <div class="ntags">${tags}</div>`;
     if(locked){
@@ -796,7 +800,7 @@ function newsSection(){
         <div class="s">快速掌握每日核心題材與連動關係・排定更新：每日 12:00（台灣時間）</div></div>
       ${datebar}
     </div>
-    <div class="newsrow">${cards||'<div class="empty" style="padding:34px 0;flex:1">這天還沒有新聞，可在 data/news.js 編輯。</div>'}</div>
+    <div class="newsrow">${cards||'<div class="empty" style="padding:34px 0;flex:1">這天沒有比對到相關產業新聞。</div>'}</div>
     ${N.meta&&N.meta.note?`<div class="newsnote">＊ ${N.meta.note}</div>`:''}
   </div>`;
 }

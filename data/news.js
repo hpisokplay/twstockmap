@@ -1,96 +1,16 @@
-// 產業焦點新聞 — 直接編輯這個檔即可增修，網站幾分鐘內自動生效
-// ─────────────────────────────────────────────────────────────
-// 結構說明：
-//   premium.free  = 每天前幾張免費，其餘自動變成 Premium 鎖定卡片
-//   premium.url   = 你的升級/贊助連結（留空則點「立即升級」會顯示提示）
-//   days["日期"]  = 當天的新聞卡片陣列，每張卡片：
-//        source  來源（例：經濟日報 / 鉅亨網）
-//        title   標題
-//        summary 摘要（2～4 句）
-//        topics  題材標籤，name=顯示文字，id=對應 data/industries.js 的題材 id
-//                （填了 id，點標籤就會跳到該產業地圖；不確定 id 就只填 name）
-// ─────────────────────────────────────────────────────────────
+// 此檔案由 scripts/fetch_news.py 自動產生並定期覆寫，請勿手動編輯
+// 如需調整新聞來源、比對規則、Premium 設定，請改 scripts/fetch_news.py
 window.DATA_NEWS = {
-  meta: { updated: "2026-07-11", note: "以下為示範內容，請自行替換為當日新聞" },
-
-  premium: {
-    free: 3,
-    title: "Premium 限定",
-    desc: "一個月一杯咖啡支持作者，解鎖今日全部焦點",
-    cta: "立即升級",
-    url: ""   // 例：填 "https://your-link.com" 或你的贊助頁；留空則顯示提示
+  "meta": {
+    "updated": "2026-07-12",
+    "note": "尚未執行過自動彙整。Push 上去後，等下一次排程（每個交易日 17:30／21:00 台北時間）自動產生，或到 GitHub 的 Actions 分頁手動「Run workflow」立即跑一次。"
   },
-
-  // 題材 id 對照（data/industries.js）：
-  // foundry晶圓代工 asic-ip矽智財ASIC osat封測先進封裝 silicon-wafer矽晶圓
-  // semi-equipment半導體設備 ai-server AI伺服器 cooling散熱液冷 pcb PCB載板
-  // optical-cpo光通訊CPO memory記憶體 passive被動元件 power電源電力
-  // defense國防軍工 leo-satellite低軌衛星 robot機器人 financial金融高股息
-  days: {
-    "2026-07-11": [
-      {
-        source: "經濟日報",
-        title: "Meta 算力翻倍 台鏈 AI 伺服器回補買盤",
-        summary: "Meta 規劃 2027 年 AI 算力倍增，自研晶片由台積電（2330）代工。台系 AI 伺服器代工廣達（2382）、緯創（3231）與機櫃供應鏈可望迎回補動能，台積電法說會前資金卡位。",
-        topics: [ { name: "AI 伺服器與組裝代工", id: "ai-server" }, { name: "散熱模組與液冷", id: "cooling" } ]
-      },
-      {
-        source: "鉅亨網",
-        title: "日月光 CoWoS 深度分析 先進封裝滿載",
-        summary: "AI 晶片需求推升 CoWoS、SoIC 先進封裝產能，日月光投控（3711）擴產進度受市場關注。測試時間拉長也帶動京元電子（2449）等測試廠稼動率走高。",
-        topics: [ { name: "封測代工與先進封裝", id: "osat" }, { name: "IC 設計｜ASIC 與矽智財", id: "asic-ip" } ]
-      },
-      {
-        source: "工商時報",
-        title: "HBM 排擠效應 利基記憶體報價回升",
-        summary: "HBM 大量吃下先進製程與封裝產能，排擠傳統 DRAM 供給，帶動利基型記憶體與 NOR Flash 報價回升，南亞科（2408）、旺宏（2337）、華邦電（2344）受惠庫存回補。",
-        topics: [ { name: "記憶體與模組", id: "memory" } ]
-      },
-      {
-        source: "經濟日報",
-        title: "AI 板材升級 台光電高速料需求旺",
-        summary: "AI 加速卡導入 M8 等級高速材料，帶動銅箔基板與高層數 PCB 需求，台光電（2383）、聯茂（6213）與 ABF 載板廠欣興（3037）稼動同步回升。",
-        topics: [ { name: "PCB 與 ABF 載板", id: "pcb" } ]
-      },
-      {
-        source: "鉅亨網",
-        title: "資料中心流量爆發 800G 光模組放量",
-        summary: "AI 資料中心內部流量激增，800G 光模組加速出貨，矽光子與 CPO 為下一階段技術路線，光環（3234）、聯鈞（3450）等供應鏈受惠，智邦（2345）白牌交換器需求同步走揚。",
-        topics: [ { name: "光通訊與 CPO", id: "optical-cpo" } ]
-      },
-      {
-        source: "自由財經",
-        title: "國防自主加碼 無人機標案放量",
-        summary: "地緣政治緊張推升國防預算，無人機與航太零件是主軸，雷虎（8033）、漢翔（2634）、長榮航太（2645）受惠軍規標案與非紅供應鏈認證題材。",
-        topics: [ { name: "國防軍工與無人機", id: "defense" } ]
-      }
-    ],
-
-    "2026-07-10": [
-      {
-        source: "經濟日報",
-        title: "電網強韌計畫 重電三雄在手訂單創高",
-        summary: "AI 資料中心用電密度暴增疊加台電強韌電網計畫，變壓器與 GIS 開關需求旺，華城（1519）、士電（1503）、中興電（1513）在手訂單能見度延伸至數年。",
-        topics: [ { name: "電源供應與電力設備", id: "power" } ]
-      },
-      {
-        source: "鉅亨網",
-        title: "人形機器人試產 關鍵零組件送樣",
-        summary: "國際大廠人形機器人邁向試產，減速機、滾珠螺桿與伺服馬達送樣認證加速，上銀（2049）、直得（1597）、東元（1504）為主要受惠族群。",
-        topics: [ { name: "機器人與自動化", id: "robot" } ]
-      },
-      {
-        source: "工商時報",
-        title: "矽晶圓長約價落底 12 吋出貨回溫",
-        summary: "半導體庫存去化告一段落，矽晶圓 12 吋出貨回溫，環球晶（6488）、中美晶（5483）長約價落底訊號浮現，材料族群估值修復。",
-        topics: [ { name: "矽晶圓與半導體材料", id: "silicon-wafer" } ]
-      },
-      {
-        source: "經濟日報",
-        title: "被動元件漲價循環 MLCC 高階品吃緊",
-        summary: "AI 伺服器單機被動元件用量倍增，MLCC 與晶片電阻高階規格供給吃緊，國巨（2327）、華新科（2492）啟動新一輪漲價，車用與 AI 用占比提升。",
-        topics: [ { name: "被動元件", id: "passive" } ]
-      }
-    ]
-  }
+  "premium": {
+    "free": 3,
+    "title": "Premium 限定",
+    "desc": "一個月一杯咖啡支持作者，解鎖今日全部焦點",
+    "cta": "立即升級",
+    "url": ""
+  },
+  "days": {}
 };

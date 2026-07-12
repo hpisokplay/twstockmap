@@ -15,8 +15,10 @@ data/
   industries.json       產業鏈分類（題材、上中下游、公司歸類）← 你可以自己編輯
   market.json           個股行情資料（自動產生）
   companies.json        公司基本資料（自動產生）
+  news.js               產業焦點新聞（自動產生，見下方「產業新聞」說明）
 scripts/
   fetch_data.py         盤後資料抓取腳本（GitHub Actions 每天自動跑）
+  fetch_news.py         產業新聞自動彙整腳本（GitHub Actions 每天自動跑）
   make_demo_data.py     產生示範資料（本機預覽用）
 github/workflows/update.yml    每日自動更新排程
 ```
@@ -84,6 +86,14 @@ Settings → Pages → Custom domain 填你買的網域，再到網域商設 CNA
 ```
 
 改完 commit，網站幾分鐘內自動生效。新加入的股票代碼只要是上市/上櫃普通股，行情會自動帶入。
+
+## 產業新聞（全自動，不用手動編輯）
+
+`data/news.js` 由 `scripts/fetch_news.py` 每次排程自動整批覆寫，**不要手動編輯這個檔案**，改了也會在下次排程時被蓋掉。
+
+新聞來源是 Yahoo奇摩股市與中央社的官方 RSS，只取用發布方自己提供的標題與短摘要（不轉載全文），每則都附回原文連結。腳本會用 `data/industries.json` 裡實際存在的公司名稱與題材名稱做關鍵字比對，自動幫新聞掛上相關題材標籤；比對不到現有題材的新聞會直接略過，不會出現點了沒反應的標籤。
+
+如果想調整新聞來源、比對規則或 Premium 解鎖設定，改 `scripts/fetch_news.py` 檔案開頭的常數即可（`FEEDS`、`KEEP_DAYS`、`PREMIUM` 等）。
 
 ## 免責聲明
 
