@@ -83,26 +83,61 @@ def fetch_csv(url, timeout=20):
         return None
 
 
+def fetch_taifex_tx():
+    """台股期貨（TX 近月）即時行情 — 臺灣期貨交易所官方開放 API
+    （https://openapi.taifex.com.tw/），盤後／夜盤交易時段（15:00–翌日05:00）
+    也能取得接近即時的報價，不像現貨指數收盤後就不再變動。"""
+    j = fetch_json("https://openapi.taifex.com.tw/v1/DailyMarketReportFut", retries=2)
+    if not j:
+        return None
+    try:
+        tx = [r for r in j if r.get("Contract") == "TX" and num(r.get("Last")) is not None]
+        if not tx:
+            return None
+        # 一般講的「台指期」是指近月合約：ContractMonth(Week) 最小的那組
+        front_month = min(r.get("ContractMonth(Week)", "999999") for r in tx)
+        rows = [r for r in tx if r.get("ContractMonth(Week)") == front_month]
+        # 同一天內優先取「盤後」（夜盤）時段的報價，比日盤收盤價更接近即時
+        rows.sort(key=lambda r: (r.get("Date", ""), r.get("TradingSession") == "盤後"))
+        r = rows[-1]
+        last = num(r.get("Last"))
+        chg = num(r.get("Change"))
+        pct = num((r.get("%") or "").replace("%", "").strip())
+        if last is None or chg is None:
+            return None
+        if pct is None and (last - chg):
+            pct = round(chg / (last - chg) * 100, 2)
+        return {"close": last, "change": chg, "pct": pct}
+    except Exception as e:  # noqa
+        print(f"  TAIFEX TX 解析失敗: {e}", file=sys.stderr)
+        return None
+
+
 def fetch_indices():
-    """指數面板：台股加權（TWSE）＋ 國際指數/ADR（stooq 公開 CSV）"""
+    """指數面板：台股（TAIFEX 期貨優先，失敗則退回 TWSE 現貨）＋ 國際指數/ADR（stooq 公開 CSV）"""
     out = []
-    # --- 台灣加權：FMTQIK 當月每日市場成交統計（含加權指數）---
-    j = fetch_json("https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK", retries=2)
-    if j and len(j) >= 2:
-        try:
-            last, prev = j[-1], j[-2]
-            c = num(last.get("TAIEX")) or num(last.get("發行量加權股價指數"))
-            p = num(prev.get("TAIEX")) or num(prev.get("發行量加權股價指數"))
-            if c and p:
-                out.append({"id": "taiex", "name": "台灣加權", "close": c,
-                            "change": round(c - p, 2), "pct": round((c - p) / p * 100, 2)})
-        except Exception as e:  # noqa
-            print(f"  taiex parse fail: {e}", file=sys.stderr)
-    # --- 國際：stooq 日線 CSV，取最後兩筆算漲跌 ---
+    # --- 台灣加權：優先用台指期近月（更接近即時），抓不到才退回現貨加權指數 ---
+    tx = fetch_taifex_tx()
+    if tx:
+        out.append({"id": "taiex", "name": "台灣加權", "close": tx["close"],
+                    "change": tx["change"], "pct": tx["pct"], "futures": True})
+    else:
+        j = fetch_json("https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK", retries=2)
+        if j and len(j) >= 2:
+            try:
+                last, prev = j[-1], j[-2]
+                c = num(last.get("TAIEX")) or num(last.get("發行量加權股價指數"))
+                p = num(prev.get("TAIEX")) or num(prev.get("發行量加權股價指數"))
+                if c and p:
+                    out.append({"id": "taiex", "name": "台灣加權", "close": c,
+                                "change": round(c - p, 2), "pct": round((c - p) / p * 100, 2)})
+            except Exception as e:  # noqa
+                print(f"  taiex parse fail: {e}", file=sys.stderr)
+    # --- 國際：stooq 日線 CSV，取最後兩筆算漲跌（皆為現貨指數，非期貨） ---
     symbols = [
         ("^sox", "費城半導體"), ("^spx", "S&P 500"), ("^ndq", "那斯達克"),
-        ("^nkx", "日經 225"), ("tsm.us", "台積電 ADR"), ("nvda.us", "輝達 NVDA"),
-        ("usdtwd", "美元/台幣"),
+        ("^nkx", "日經 225"), ("^kospi", "韓國綜合"), ("^vix", "VIX 恐慌"),
+        ("tsm.us", "台積電 ADR"), ("nvda.us", "輝達 NVDA"), ("usdtwd", "美元/台幣"),
     ]
     for sym, name in symbols:
         lines = fetch_csv(f"https://stooq.com/q/d/l/?s={sym}&i=d")

@@ -29,7 +29,11 @@ header{position:sticky;top:0;z-index:50;background:rgba(11,18,32,.92);backdrop-f
 .brand{display:flex;align-items:center;gap:10px;padding:12px 0 8px}
 .brand h1{font-size:18px;font-weight:700;letter-spacing:.5px}
 .brand .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:14px}
-.brand .upd{margin-left:auto;font-size:11px;color:var(--dim)}
+.brand .upd{font-size:11px;color:var(--dim)}
+.brand .hsearch{margin-left:auto}
+.brand .hsearch input{width:200px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:6px 12px;font-size:12.5px;outline:none}
+.brand .hsearch input:focus{border-color:var(--accent)}
+@media(max-width:640px){.brand .hsearch{display:none}}
 nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;padding-bottom:0}
 nav::-webkit-scrollbar{display:none}
 nav button{background:none;border:none;color:var(--sub);font-size:14px;padding:9px 14px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent}
@@ -154,7 +158,9 @@ footer{border-top:1px solid var(--line);color:var(--dim);font-size:11.5px;text-a
 /* 每日焦點 */
 .idxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px}
 .idx{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.idx .n{font-size:12.5px;color:var(--sub)}
+.idx .n{font-size:12.5px;color:var(--sub);display:flex;align-items:center;gap:6px}
+.idx .futbadge{font-size:9.5px;color:var(--accent);background:rgba(90,162,255,.14);border-radius:6px;padding:1px 6px;font-weight:600}
+.updtime{text-align:right;font-size:11px;color:var(--dim);margin-bottom:16px}
 .idx .v{font-size:20px;font-weight:700;margin:2px 0}
 .idx .d{font-size:12.5px}
 .cols2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -352,6 +358,7 @@ table.ov tr.body:hover{background:var(--card2);cursor:pointer}
   <div class="hwrap">
     <div class="brand">
       <div class="logo">📈</div><h1>台股產業地圖</h1>
+      <div class="hsearch"><input id="hsearch" placeholder="🔍 搜尋個股名稱或代碼…" onkeydown="if(event.key==='Enter')headerSearch(this.value)"></div>
       <span class="upd" id="upd"></span>
     </div>
     <nav id="nav">
@@ -829,9 +836,10 @@ function vDaily(){
   <h2 class="pagetitle">每日焦點</h2>
   <div class="pagesub">大盤與國際指數、產業與個股漲跌焦點（盤後更新）</div>
   <div class="idxgrid">${idx.map(x=>`<div class="idx">
-    <div class="n">${x.name}</div><div class="v">${x.close.toLocaleString('zh-TW')}</div>
+    <div class="n">${x.name}${x.futures?'<span class="futbadge">期貨</span>':''}</div><div class="v">${x.close.toLocaleString('zh-TW')}</div>
     <div class="d ${fmt.cls(x.pct)}">${(x.change>0?'+':'')+x.change}（${fmt.pct(x.pct)}）</div></div>`).join('')}
   </div>
+  ${S.mkt.meta.updated?`<div class="updtime">資料更新於 ${(S.mkt.meta.updated.split(' ')[1]||'')}</div>`:''}
   ${newsSection()}
   <div class="cols2">
     <div class="panel"><h4>🔺 產業焦點（平均漲幅前 8）</h4>
@@ -1163,6 +1171,7 @@ function go(tab,arg){
   if(tab==='db'&&arg)S.stock=arg;
   render(); window.scrollTo({top:0});
 }
+function headerSearch(v){ v=(v||'').trim(); if(!v) return; S.q=v; go('db'); const el=document.getElementById('hsearch'); if(el) el.value=''; }
 function setCat(c){S.cat=c;render();}
 let qT=null;
 function setQ(v){S.q=v;clearTimeout(qT);qT=setTimeout(()=>{const el=document.querySelector('.list input');const pos=el&&el.selectionStart;render();const el2=document.querySelector('.list input');if(el2){el2.focus();el2.setSelectionRange(pos,pos);}},250);}
