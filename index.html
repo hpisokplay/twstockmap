@@ -524,6 +524,8 @@ table.matrix .mcode{font-size:11px;color:var(--dim)}
 <script src="data/news.js"></script>
 <script src="data/history.js"></script>
 <script src="data/tdcc.js"></script>
+<script src="data/inst_hist.js"></script>
+<script src="data/margin_hist.js"></script>
 <footer class="bigfoot">
   <div class="fslogan">運用 AI 將複雜產業轉化為易懂的產業地圖。歡迎追蹤，一同探索產業奧秘！</div>
   <div class="fsoc">
@@ -1051,6 +1053,48 @@ function stFinancial(code,s,c){
       </div></div>
     <div class="prembar"><span class="pico">📊</span><span class="ptxt">損益表、ROE/ROA、財務健全度、現金流量等深度圖表為 <b>Premium</b> 內容</span><button class="pbtn" onclick="premiumGo()">登入升級</button></div>`;
 }
+// 多序列 SVG 折線圖：series=[{vals:[...],color}]，共用 Y 軸
+function svgMultiLine(series, labels, opt){
+  opt=opt||{};
+  const W=340,H=170,padL=46,padR=12,padT=12,padB=28;
+  const all=[].concat(...series.map(s=>s.vals)).filter(v=>v!=null&&!isNaN(v));
+  if(all.length<2) return `<div class="empty" style="padding:34px 0;font-size:12.5px">資料累積中，尚無足夠歷史繪製圖表。</div>`;
+  let mn=Math.min(...all),mx=Math.max(...all);
+  if(opt.zero){mn=Math.min(mn,0);mx=Math.max(mx,0);}
+  if(mn===mx){mn-=1;mx+=1;}
+  const n=labels.length;
+  const X=i=>padL+(n<=1?0:i/(n-1)*(W-padL-padR));
+  const Y=v=>padT+(1-(v-mn)/(mx-mn))*(H-padT-padB);
+  const yf=opt.yfmt||(v=>Math.round(v));
+  const grid=[mx,(mx+mn)/2,mn].map(v=>{const y=Y(v);return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#233250" stroke-dasharray="3 3"/><text x="${padL-6}" y="${(y+3).toFixed(1)}" fill="#5c6f8f" font-size="9" text-anchor="end">${yf(v)}</text>`;}).join('');
+  const zero=(opt.zero&&mn<0&&mx>0)?`<line x1="${padL}" y1="${Y(0).toFixed(1)}" x2="${W-padR}" y2="${Y(0).toFixed(1)}" stroke="#48597f"/>`:'';
+  const paths=series.map(s=>{
+    const pts=s.vals.map((v,i)=>({v,i})).filter(p=>p.v!=null&&!isNaN(p.v));
+    if(pts.length<2) return '';
+    const d=pts.map((p,k)=>`${k?'L':'M'}${X(p.i).toFixed(1)},${Y(p.v).toFixed(1)}`).join('');
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }).join('');
+  const xl=[0,Math.floor((n-1)/2),n-1].map(i=>`<text x="${X(i).toFixed(1)}" y="${H-6}" fill="#5c6f8f" font-size="9" text-anchor="middle">${labels[i]||''}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${grid}${zero}${paths}${xl}</svg>`;
+}
+const lotFmt=v=>{const a=Math.abs(v);return a>=10000?(v/10000).toFixed(1)+'萬':Math.round(v).toString();};
+function chartLegend(items){
+  return `<div style="display:flex;gap:16px;justify-content:center;font-size:11.5px;color:var(--sub);margin-top:8px;flex-wrap:wrap">${items.map(it=>`<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:14px;height:3px;border-radius:2px;background:${it.color};display:inline-block"></i>${it.name}</span>`).join('')}</div>`;
+}
+function instSeries(code){
+  const h=window.DATA_INST_HIST; if(!h) return null;
+  const dates=Object.keys(h).sort();
+  const f=[],t=[],d=[]; let has=false;
+  for(const dt of dates){ const r=h[dt]&&h[dt][code]; if(r)has=true; f.push(r?r[0]:null); t.push(r?r[1]:null); d.push(r?r[2]:null); }
+  return {dates, labels:dates.map(x=>x.slice(5).replace('-','/')), f, t, d, has};
+}
+function marginSeries(code){
+  const h=window.DATA_MARGIN_HIST; if(!h) return null;
+  const dates=Object.keys(h).sort();
+  const fin=[],sh=[]; let has=false;
+  for(const dt of dates){ const r=h[dt]&&h[dt][code]; if(r)has=true; fin.push(r?r[0]:null); sh.push(r?r[1]:null); }
+  return {dates, labels:dates.map(x=>x.slice(5).replace('-','/')), fin, sh, has};
+}
 function stChips(code,s){
   const nets=[{k:'外資',v:s.foreign_net},{k:'投信',v:s.trust_net},{k:'三大法人合計',v:s.inst_net}];
   const maxAbs=Math.max(1,...nets.map(n=>Math.abs(n.v||0)));
@@ -1059,13 +1103,37 @@ function stChips(code,s){
     const w=v==null?0:Math.abs(v)/maxAbs*50; const left=(v==null||v>=0)?'50%':(50-w)+'%';
     return `<div class="nrow"><span class="k">${n.k}</span><span class="track"><span class="mid"></span><span class="fill" style="left:${left};width:${w}%;background:${color}"></span></span><span class="val ${ncls}">${fmt.lot(v)}</span></div>`;
   }).join('');
-  const td=tdccSeries(code);
+  const inst=instSeries(code), mgn=marginSeries(code), td=tdccSeries(code);
+  const IC={f:'#3ddc9c',t:'#f0963c',d:'#ff5a6a'};  // 外資綠/投信橘/自營紅（同 aistockmap）
+  // 三大法人買賣超趨勢 + 近期數據
+  let instBlock='';
+  if(inst&&inst.has){
+    const recent=inst.dates.slice(-3).reverse();
+    const idx=d=>inst.dates.indexOf(d);
+    const cell=(arr,d)=>{const v=arr[idx(d)];return v==null?'—':`<span class="${fmt.cls(v)}">${v>0?'+':''}${lotFmt(v)}</span>`;};
+    instBlock=`<div class="infocard"><div class="sechd"><span class="bar"></span><h4>三大法人買賣超趨勢</h4><span class="sub">近 ${inst.dates.length} 日・張</span></div>
+      ${svgMultiLine([{vals:inst.f,color:IC.f},{vals:inst.t,color:IC.t},{vals:inst.d,color:IC.d}],inst.labels,{zero:true,yfmt:lotFmt})}
+      ${chartLegend([{name:'外資',color:IC.f},{name:'投信',color:IC.t},{name:'自營商',color:IC.d}])}
+      <table class="ov" style="margin-top:12px"><tr><th>日期</th><th style="text-align:right">外資</th><th style="text-align:right">投信</th><th style="text-align:right">自營商</th></tr>
+      ${recent.map(d=>`<tr><td>${d.slice(5)}</td><td style="text-align:right">${cell(inst.f,d)}</td><td style="text-align:right">${cell(inst.t,d)}</td><td style="text-align:right">${cell(inst.d,d)}</td></tr>`).join('')}</table>
+    </div>`;
+  }
+  // 融資融券餘額趨勢
+  let mgnBlock='';
+  if(mgn&&mgn.has){
+    mgnBlock=`<div class="infocard"><div class="sechd"><span class="bar"></span><h4>融資融券餘額趨勢</h4><span class="sub">近 ${mgn.dates.length} 日・張</span></div>
+      ${svgMultiLine([{vals:mgn.fin,color:'#ff5a6a'},{vals:mgn.sh,color:'#2ecc8f'}],mgn.labels,{yfmt:lotFmt})}
+      ${chartLegend([{name:'融資餘額',color:'#ff5a6a'},{name:'融券餘額',color:'#2ecc8f'}])}
+    </div>`;
+  }
   return `
     <div class="infocard"><div class="sechd"><span class="bar"></span><h4>法人籌碼（今日買賣超）</h4><span class="sub">單位：張</span></div>
       <div class="netbars">${netbarsHtml}</div></div>
+    ${instBlock}
+    ${mgnBlock}
     <div class="infocard"><div class="sechd"><span class="bar"></span><h4>大戶持股比率趨勢</h4><span class="sub">集保 &gt;400 張持股占比（週資料）</span></div>
       ${svgLine(td.vals,td.labels,{color:'#9d7bff',yfmt:v=>v.toFixed(1)+'%'})}</div>
-    <div class="prembar"><span class="pico">🧑‍🤝‍🧑</span><span class="ptxt">散戶／中實戶／大戶完整分布與融資融券趨勢為 <b>Premium</b> 內容</span><button class="pbtn" onclick="premiumGo()">登入升級</button></div>`;
+    ${(!inst||!inst.has)&&(!mgn||!mgn.has)?`<div class="prembar"><span class="pico">🧑‍🤝‍🧑</span><span class="ptxt">個股籌碼歷史累積中，部署後每日自動增加</span><button class="pbtn" onclick="premiumGo()">登入升級</button></div>`:''}`;
 }
 function stTech(code){
   const sym=tvSymbol(code);
@@ -1620,7 +1688,7 @@ function boot(){
     if(!bootTried){
       // 備援：若 data/ 底下找不到，改從 index.html 同一層載入
       bootTried=true;
-      const files=[['DATA_INDUSTRIES','industries.js'],['DATA_MARKET','market.js'],['DATA_COMPANIES','companies.js'],['DATA_CREATORS','creators.js'],['DATA_NEWS','news.js'],['DATA_HISTORY','history.js'],['DATA_TDCC','tdcc.js']];
+      const files=[['DATA_INDUSTRIES','industries.js'],['DATA_MARKET','market.js'],['DATA_COMPANIES','companies.js'],['DATA_CREATORS','creators.js'],['DATA_NEWS','news.js'],['DATA_HISTORY','history.js'],['DATA_TDCC','tdcc.js'],['DATA_INST_HIST','inst_hist.js'],['DATA_MARGIN_HIST','margin_hist.js']];
       let left=files.length;
       for(const [v,f] of files){
         if(window[v]){if(--left===0)boot();continue;}

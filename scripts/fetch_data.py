@@ -258,6 +258,96 @@ def update_tdcc(keep=5):
     return hist
 
 
+def _lots(s):
+    """股數字串 -> 張（整數）"""
+    v = num(s)
+    return round(v / 1000) if v is not None else 0
+
+
+def _int(s):
+    v = num(s)
+    return int(v) if v is not None else 0
+
+
+def _t86_records(d, valid):
+    """d=YYYYMMDD -> {code:[外資淨,投信淨,自營淨(張)]}；非交易日/無資料回 None"""
+    j = fetch_json(f"https://www.twse.com.tw/rwd/zh/fund/T86?date={d}&selectType=ALLBUT0999&response=json", retries=1)
+    if not (j and j.get("stat") == "OK" and j.get("data")):
+        return None
+    f = j.get("fields", [])
+    try:
+        i_c = f.index("證券代號")
+        i_fore = next(i for i, x in enumerate(f) if "外陸資買賣超" in x)
+        i_trust = f.index("投信買賣超股數")
+        i_deal = next(i for i, x in enumerate(f) if x.startswith("自營商買賣超股數"))
+    except (ValueError, StopIteration):
+        i_c, i_fore, i_trust, i_deal = 0, 4, 10, 11
+    out = {}
+    for row in j["data"]:
+        code = str(row[i_c]).strip()
+        if valid is None or code in valid:
+            out[code] = [_lots(row[i_fore]), _lots(row[i_trust]), _lots(row[i_deal])]
+    return out or None
+
+
+def _margin_records(d, valid):
+    """d=YYYYMMDD -> {code:[融資餘額,融券餘額(張)]}；非交易日/無資料回 None"""
+    j = fetch_json(f"https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={d}&selectType=ALL&response=json", retries=1)
+    if not (j and j.get("stat") == "OK"):
+        return None
+    tbl = None
+    for t in (j.get("tables") or []):
+        fs = t.get("fields") or []
+        if t.get("data") and len(t["data"]) > 50 and any("代號" in str(x) for x in fs):
+            tbl = t
+            break
+    if not tbl:
+        return None
+    out = {}
+    for row in tbl["data"]:
+        code = str(row[0]).strip()
+        if len(code) == 4 and code.isdigit() and (valid is None or code in valid):
+            out[code] = [_int(row[6]), _int(row[12])]  # 融資今日餘額, 融券今日餘額
+    return out or None
+
+
+def update_series_history(name, var, fetch_fn, valid, keep=20, scan=40):
+    """通用：往回掃交易日補齊 keep 天的個股歷史（外資法人／融資融券），已存在的日期不重抓。
+    第一次執行會 backfill，之後每天只補當天。任何失敗都不影響其他資料。"""
+    path = os.path.join(DATA_DIR, name + ".json")
+    hist = {}
+    if os.path.exists(path):
+        try:
+            hist = json.load(open(path, encoding="utf-8"))
+        except Exception:  # noqa
+            hist = {}
+    for back in range(0, scan):
+        if len(hist) >= keep:
+            break
+        dt = datetime.now(TPE) - timedelta(days=back)
+        if dt.weekday() >= 5:  # 六日跳過
+            continue
+        d = dt.strftime("%Y%m%d")
+        iso = f"{d[:4]}-{d[4:6]}-{d[6:]}"
+        if iso in hist:
+            continue
+        rec = fetch_fn(d, valid)
+        if rec:
+            hist[iso] = rec
+            print(f"  {name} {iso}: {len(rec)} 檔")
+        time.sleep(1.2)
+    dates = sorted(hist.keys())[-keep:]
+    hist = {d: hist[d] for d in dates}
+    # 只輸出 .js（網站實際載入的格式），省下每日一份 .json 的重複 git 變動
+    with open(os.path.join(DATA_DIR, name + ".js"), "w", encoding="utf-8") as f:
+        f.write(f"window.{var} = ")
+        json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))
+        f.write(";")
+    with open(path, "w", encoding="utf-8") as f:  # 保留 json 供累積/查證，不被網站載入
+        json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))
+    return hist
+
+
 def main():
     os.makedirs(DATA_DIR, exist_ok=True)
     stocks = {}
@@ -412,9 +502,22 @@ def main():
     mops = fetch_mops()
 
     # ---------- 歷史累積（週/月漲幅、大戶持股） ----------
-    print("[12/12] 歷史資料累積 ...")
+    print("[12/14] 歷史資料累積 ...")
     history = update_history(stocks, trade_date)
     tdcc = update_tdcc()
+
+    # ---------- 個股法人／融資融券歷史（供個股籌碼分析折線圖；首次執行會 backfill） ----------
+    valid = set(stocks.keys())
+    print("[13/14] 個股三大法人歷史 ...")
+    try:
+        update_series_history("inst_hist", "DATA_INST_HIST", _t86_records, valid)
+    except Exception as e:  # noqa 任何失敗都不影響主要資料
+        print(f"  inst_hist 失敗（略過）: {e}", file=sys.stderr)
+    print("[14/14] 個股融資融券歷史 ...")
+    try:
+        update_series_history("margin_hist", "DATA_MARGIN_HIST", _margin_records, valid)
+    except Exception as e:  # noqa
+        print(f"  margin_hist 失敗（略過）: {e}", file=sys.stderr)
 
     # ---------- 輸出 ----------
     now = datetime.now(TPE)
