@@ -206,8 +206,29 @@ def fetch_mops():
     return out
 
 
-def update_history(stocks, trade_date, keep=26):
-    """累積每日收盤價歷史（供週/月漲幅排行用），保留最近 keep 個交易日"""
+def _miindex_closes(d):
+    """MI_INDEX：某過去交易日全上市個股收盤價（一天一請求）。d=YYYYMMDD -> {code:close}"""
+    j = fetch_json(f"https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={d}&type=ALLBUT0999&response=json", retries=1)
+    if not (j and j.get("stat") == "OK"):
+        return None
+    for t in (j.get("tables") or []):
+        fs = t.get("fields") or []
+        if "證券代號" in fs and any("收盤" in x for x in fs) and t.get("data"):
+            ic = fs.index("證券代號")
+            icl = next(i for i, x in enumerate(fs) if "收盤" in x)
+            out = {}
+            for row in t["data"]:
+                code = str(row[ic]).strip()
+                cl = num(row[icl])
+                if cl is not None and 0 < len(code) <= 6:
+                    out[code] = cl
+            return out or None
+    return None
+
+
+def update_history(stocks, trade_date, keep=26, backfill=True):
+    """累積每日收盤價歷史（供週/月漲幅排行用），保留最近 keep 個交易日。
+    今日用即時 stocks 收盤；缺漏的過去交易日用 MI_INDEX 自動補齊（可修正早期示範資料）。"""
     path = os.path.join(DATA_DIR, "history.json")
     hist = {}
     if os.path.exists(path):
@@ -217,6 +238,23 @@ def update_history(stocks, trade_date, keep=26):
             hist = {}
     if trade_date:
         hist[trade_date] = {c: s["close"] for c, s in stocks.items() if s.get("close") is not None}
+    # 自癒：補齊最近 keep 個交易日中缺漏者（一天一請求 MI_INDEX）
+    if backfill:
+        for back in range(0, keep + 15):
+            if len(hist) >= keep:
+                break
+            dt = datetime.now(TPE) - timedelta(days=back)
+            if dt.weekday() >= 5:
+                continue
+            d = dt.strftime("%Y%m%d")
+            iso = f"{d[:4]}-{d[4:6]}-{d[6:]}"
+            if iso in hist:
+                continue
+            cl = _miindex_closes(d)
+            if cl:
+                hist[iso] = cl
+                print(f"  history 補 {iso}: {len(cl)} 檔")
+            time.sleep(1.2)
     dates = sorted(hist.keys())[-keep:]
     hist = {d: hist[d] for d in dates}
     json.dump(hist, open(path, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
@@ -248,10 +286,15 @@ def update_tdcc(keep=5):
                     big[code] = round(big.get(code, 0) + float(p[5]), 2)
                 except ValueError:
                     pass
-        if date and big:
+        # 只接受完整快照（正常一週約 4000+ 檔）；不完整/示範資料（如僅百餘檔）直接丟棄，避免污染趨勢
+        if date and len(big) >= 1000:
             d_iso = f"{date[:4]}-{date[4:6]}-{date[6:]}" if len(date) == 8 else date
             hist[d_iso] = big
             print(f"  TDCC {d_iso}: {len(big)} 檔大戶比率")
+        elif big:
+            print(f"  TDCC 快照不完整（{len(big)} 檔）已略過", file=sys.stderr)
+    # 清掉歷史中殘留的不完整快照（每檔比率 0–100，正常快照 >1000 檔）
+    hist = {d: v for d, v in hist.items() if len(v) >= 1000}
     dates = sorted(hist.keys())[-keep:]
     hist = {d: hist[d] for d in dates}
     json.dump(hist, open(path, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))

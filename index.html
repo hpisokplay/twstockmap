@@ -1344,10 +1344,12 @@ function weekMoversPanel(){
   if(!h||dates.length<mode+1){
     body=`<div style="color:var(--dim);font-size:12.5px;padding:20px 0;text-align:center">資料累積中（目前 ${dates.length} 個交易日，需 ${mode+1} 日）。<br>部署後每個交易日自動累積，約 ${mode===5?'一週':'一個月'}後開始顯示。</div>`;
   }else{
+    // 防呆：漲停 10%/日，mode 日理論上限約 (1.1^mode-1)；超過即視為資料異常排除
+    const cap=(Math.pow(1.1,mode)-1)*120;
     const rows=Object.entries(S.mkt.stocks)
       .filter(([cd,s])=>s.close>=10&&(s.volume||0)>=500000&&cd.length===4)
       .map(([cd,s])=>({cd,s,chg:histChange(cd,mode)}))
-      .filter(x=>x.chg!=null).sort((a,b)=>b.chg-a.chg).slice(0,8);
+      .filter(x=>x.chg!=null&&Math.abs(x.chg)<=cap).sort((a,b)=>b.chg-a.chg).slice(0,8);
     body=rows.map((x,i)=>`<div class="rrow" onclick="go('db','${x.cd}')">
       <span class="i">${i+1}</span><span>${x.s.name}</span><span class="cd">${x.cd}</span>
       <span class="r ${fmt.cls(x.chg)}">${fmt.pct(x.chg)}</span></div>`).join('');
@@ -1372,6 +1374,8 @@ function bigHolderPanel(){
     const rows=Object.keys(c)
       .filter(cd=>S.mkt.stocks[cd]&&p[cd]!=null&&S.mkt.stocks[cd].close>=10)
       .map(cd=>({cd,s:S.mkt.stocks[cd],d:c[cd]-p[cd],from:p[cd],to:c[cd]}))
+      // 防呆：大戶比率週變動 >20pp 幾乎不可能，視為資料異常排除
+      .filter(x=>Math.abs(x.d)<=20)
       .sort((a,b)=>b.d-a.d).slice(0,8);
     body=rows.map((x,i)=>`<div class="rrow" onclick="go('db','${x.cd}')">
       <span class="i">${i+1}</span><span>${x.s.name}</span><span class="cd">${x.cd}</span>
